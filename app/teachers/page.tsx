@@ -104,7 +104,7 @@ export default function TeachersPage() {
         <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-neutral-100 sm:text-5xl">
           Temukan Pengajar Ahli Kami
         </h1>
-        <p className="mt-3 text-lg text-gray-600 dark:text-neutral-400 max-w-2xl">
+        <p className="mt-3 text-base text-gray-600 dark:text-neutral-400 max-w-2xl">
           Jelajahi daftar pengajar profesional kami yang siap membantu Anda mencapai tujuan belajar.
           Filter berdasarkan keahlian atau cari berdasarkan nama.
         </p>

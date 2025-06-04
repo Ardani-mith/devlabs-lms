@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="600" height="600" viewBox="0 0 600 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background Elements -->
+    <circle cx="300" cy="300" r="250" fill="#F3F4F6" opacity="0.5"/>
+    <circle cx="300" cy="300" r="200" fill="#E5E7EB" opacity="0.3"/>
+    
+    <!-- Decorative Elements -->
+    <path d="M150,200 Q300,150 450,200" stroke="#93C5FD" stroke-width="2" fill="none" opacity="0.5"/>
+    <path d="M150,400 Q300,450 450,400" stroke="#93C5FD" stroke-width="2" fill="none" opacity="0.5"/>
+    
+    <!-- Main Illustration - Graduation Cap -->
+    <path d="M250,200 L350,200 L350,250 L300,280 L250,250 Z" fill="#3B82F6"/>
+    <path d="M300,280 L300,350" stroke="#3B82F6" stroke-width="4"/>
+    <circle cx="300" cy="350" r="20" fill="#3B82F6"/>
+    
+    <!-- Decorative Dots -->
+    <circle cx="200" cy="250" r="8" fill="#60A5FA" opacity="0.6"/>
+    <circle cx="400" cy="250" r="8" fill="#60A5FA" opacity="0.6"/>
+    <circle cx="250" cy="300" r="8" fill="#60A5FA" opacity="0.6"/>
+    <circle cx="350" cy="300" r="8" fill="#60A5FA" opacity="0.6"/>
+    
+    <!-- Abstract Learning Elements -->
+    <path d="M150,150 L180,180" stroke="#60A5FA" stroke-width="3" opacity="0.7"/>
+    <path d="M420,150 L390,180" stroke="#60A5FA" stroke-width="3" opacity="0.7"/>
+    <path d="M150,450 L180,420" stroke="#60A5FA" stroke-width="3" opacity="0.7"/>
+    <path d="M420,450 L390,420" stroke="#60A5FA" stroke-width="3" opacity="0.7"/>
+    
+    <!-- Decorative Circles -->
+    <circle cx="200" cy="150" r="15" fill="#93C5FD" opacity="0.4"/>
+    <circle cx="400" cy="150" r="15" fill="#93C5FD" opacity="0.4"/>
+    <circle cx="200" cy="450" r="15" fill="#93C5FD" opacity="0.4"/>
+    <circle cx="400" cy="450" r="15" fill="#93C5FD" opacity="0.4"/>
+</svg> 

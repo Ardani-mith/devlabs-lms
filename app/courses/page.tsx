@@ -21,8 +21,7 @@ const allCoursesData: CourseDetails[] = [
     rating: 4.8,
     studentsEnrolled: 1250,
     price: 750000,
-    // Pastikan courseUrl adalah path yang benar ke halaman detail
-    courseUrl: "/courses/ultimate-web-development-bootcamp-2025", // slug: ultimate-web-development-bootcamp-2025
+    courseUrl: "/courses/ultimate-web-development-bootcamp-2025",
     isNew: true,
     tags: ["React", "Node.js", "Full-stack"]
   },
@@ -89,10 +88,10 @@ export default function CoursesPage() {
   return (
     <div className="space-y-10 p-4 sm:p-6 lg:p-8 text-text-light-primary dark:text-text-dark-primary">
       <header className="mb-12">
-        <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-neutral-100 sm:text-5xl">
+        <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-neutral-100 sm:text-5xl">
           Jelajahi Dunia Pengetahuan
         </h1>
-        <p className="mt-3 text-lg text-gray-600 dark:text-neutral-400 max-w-3xl">
+        <p className="mt-3 text-base text-gray-600 dark:text-neutral-400 max-w-3xl">
           Temukan kursus yang tepat untuk Anda dari berbagai kategori dan tingkat keahlian.
           Mulai perjalanan belajar Anda hari ini!
         </p>

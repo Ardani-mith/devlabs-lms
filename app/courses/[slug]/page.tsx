@@ -546,7 +546,7 @@ export default function CourseDetailPage({ params: paramsFromProps }: { params: 
         <h1 className="text-3xl font-bold text-gray-800 dark:text-neutral-200">Mencari Kursus...</h1>
         {/* Menggunakan `slug` yang sudah di-resolve */}
         <p className="text-gray-500 dark:text-neutral-400 mt-3">Jika halaman tidak muncul, kursus dengan slug "{slug}" mungkin tidak ada.</p>
-        <Link href="/dashboard/courses" className="mt-8 px-7 py-3 bg-brand-purple text-white font-semibold text-sm rounded-lg hover:bg-purple-700 transition-colors shadow-md">
+        <Link href="/courses" className="mt-8 px-7 py-3 bg-brand-purple text-white font-semibold text-sm rounded-lg hover:bg-purple-700 transition-colors shadow-md">
           Kembali ke Daftar Kursus
         </Link>
       </div>
@@ -781,7 +781,7 @@ export default function CourseDetailPage({ params: paramsFromProps }: { params: 
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-neutral-100 mb-6">Anda Mungkin Juga Tertarik Dengan</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-8">
                         {courseData.relatedCourses.slice(0,2).map(related => (
-                            <Link key={related.slug} href={`/dashboard/courses/${related.slug}`} className="group block bg-white dark:bg-neutral-800/90 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-neutral-700/70 transform hover:-translate-y-1">
+                            <Link key={related.slug} href={`/courses/${related.slug}`} className="group block bg-white dark:bg-neutral-800/90 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-neutral-700/70 transform hover:-translate-y-1">
                                 <div className="relative w-full h-36 sm:h-40 rounded-lg overflow-hidden mb-3">
                                     <Image
                                       src={related.thumbnailUrl}

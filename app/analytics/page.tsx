@@ -86,7 +86,7 @@ export default function AnalyticsPage() {
           <h1 className="text-3xl font-bold text-text-light-primary dark:text-text-dark-primary">
             Analytics Dashboard
           </h1>
-          <p className="text-text-light-secondary dark:text-text-dark-secondary mt-1">
+          <p className="text-base text-gray-600 dark:text-neutral-400 mt-1">
             Welcome back! Here's your platform overview.
           </p>
         </div>
