@@ -1,5 +1,5 @@
 // hoc/withAuth.tsx
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, User } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -13,7 +13,7 @@ const withAuth = <P extends object>(
 
     useEffect(() => {
       if (!isLoading && !token) { // Jika loading selesai dan tidak ada token (belum login)
-        router.replace('/login'); // Redirect ke login
+        router.replace('/auth/login'); // Redirect ke login
       } else if (!isLoading && user && !allowedRoles.includes(user.role)) {
         // Pengguna login tapi tidak punya peran yang diizinkan
         router.replace('/dashboard/unauthorized'); // Atau halaman error akses

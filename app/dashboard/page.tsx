@@ -169,7 +169,7 @@ export default function DashboardPage() {
     return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
             <p className="text-lg text-neutral-600 dark:text-neutral-400">Silakan login untuk mengakses dashboard.</p>
-            <Link href="/login" className="mt-4 px-6 py-2 bg-brand-purple text-white rounded-lg hover:bg-purple-700">
+            <Link href="/auth/login" className="mt-4 px-6 py-2 bg-brand-purple text-white rounded-lg hover:bg-purple-700">
                 Ke Halaman Login
             </Link>
         </div>
