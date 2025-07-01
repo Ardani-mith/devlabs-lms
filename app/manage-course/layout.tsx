@@ -2,7 +2,12 @@ import { Sidebar } from "@/components/dashboard/sidebar";
 import { Header } from "@/components/dashboard/header";
 import { ReactNode } from "react";
 
-export default function DashboardLayout({
+export const metadata = {
+  title: "Daftar Kursus - LMS Devlab",
+  description: "Jelajahi beragam kursus untuk meningkatkan keahlian Anda.",
+};
+
+export default function ManageCourseLayout({
   children,
 }: {
   children: ReactNode;

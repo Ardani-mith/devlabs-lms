@@ -16,7 +16,7 @@ const contacts = [
   {
     id: 1,
     name: "Jenny Wilson",
-    avatar: "https://i.pinimg.com/736x/e0/f3/0c/e0f30c11247a63ddc167c92723bdbdb5.jpg", // Ganti dengan path avatar yang benar
+    avatar: "https://images.unsplash.com/photo-1494790108755-2616b332c2d2?w=400&h=400&fit=crop&crop=face", // Ganti dengan path avatar yang benar
     lastMessage: "Hello, Cynthia! Your lesson request...",
     time: "Just now",
     unread: 0,
@@ -25,7 +25,7 @@ const contacts = [
   {
     id: 2,
     name: "Dominick Romaguera",
-    avatar: "https://i.pinimg.com/736x/4d/ba/eb/4dbaebcebabee416c116154fb7ff7cbd.jpg",
+    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
     lastMessage: "Hey Jenny, I'll prepare some to...",
     time: "10min ago",
     unread: 5,
@@ -34,7 +34,7 @@ const contacts = [
   {
     id: 3,
     name: "Dolores Raynor",
-    avatar: "https://i.pinimg.com/736x/21/94/29/219429747dc271e879e24471e8d341a4.jpg",
+    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face",
     lastMessage: "Already done! ✅ Btw I was loo...",
     time: "27min ago",
     unread: 3,
@@ -43,7 +43,7 @@ const contacts = [
   {
     id: 4,
     name: "Felicia Dencik",
-    avatar: "https://i.pinimg.com/736x/28/25/3f/28253f8a44e924262c94f626dac9c10d.jpg",
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop&crop=face",
     lastMessage: "Is it module 1, right? Cause I've...",
     time: "2hr ago",
     unread: 0,
@@ -60,7 +60,7 @@ const messages = [
     type: "system",
     text: "Hey, Cynthia! 👋 You've sent a booking request to Jenny. Soon she will get in contact with you.",
     time: "Friday 2:20pm",
-    avatar: "https://i.pinimg.com/736x/af/fc/f4/affcf4e9ca345d70f1a53fbef609a30d.jpg", // logo sistem atau avatar khusus
+    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop&crop=face", // logo sistem atau avatar khusus
   },
   {
     id: "jenny1",

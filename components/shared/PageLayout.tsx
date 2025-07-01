@@ -2,11 +2,12 @@ import { Sidebar } from "@/components/dashboard/sidebar";
 import { Header } from "@/components/dashboard/header";
 import { ReactNode } from "react";
 
-export default function DashboardLayout({
-  children,
-}: {
+interface PageLayoutProps {
   children: ReactNode;
-}) {
+}
+
+export default function PageLayout({ children }: PageLayoutProps) {
+  // Using dashboard components as they're the most complete and consistent
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-neutral-900">
       <Sidebar />
@@ -18,4 +19,4 @@ export default function DashboardLayout({
       </div>
     </div>
   );
-}
+} 

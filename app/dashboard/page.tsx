@@ -8,7 +8,7 @@ import {
   BellIcon, BookOpenIcon, CalendarDaysIcon, CheckCircleIcon, ChevronRightIcon,
   ClockIcon, DocumentCheckIcon, FireIcon,
   ChatBubbleLeftRightIcon,
-  HomeIcon, LightBulbIcon, NewspaperIcon, SparklesIcon, StarIcon, UserCircleIcon, VideoCameraIcon, BriefcaseIcon, ExclamationTriangleIcon, ArrowTrendingUpIcon,
+  LightBulbIcon, NewspaperIcon, SparklesIcon, StarIcon, UserCircleIcon, BriefcaseIcon, ExclamationTriangleIcon, ArrowTrendingUpIcon,
   CurrencyDollarIcon
 } from '@heroicons/react/24/outline';
 import { BackgroundGradient } from '@/components/ui/background-gradient';
@@ -23,7 +23,7 @@ const summaryStatsData = {
     { title: "Pendaftaran Baru (30 Hari)", value: "78", icon: UserCircleIcon, color: "text-amber-600 dark:text-amber-400", bgColor: "bg-amber-100 dark:bg-amber-900/50" },
     { title: "Total Pendapatan", value: "Rp 120Jt", icon: CurrencyDollarIcon, color: "text-rose-600 dark:text-rose-400", bgColor: "bg-rose-100 dark:bg-rose-900/50" },
   ],
-  INSTRUCTOR: [
+  TEACHER: [
     { title: "Kursus Anda", value: "8", icon: BookOpenIcon, color: "text-blue-600 dark:text-blue-400", bgColor: "bg-blue-100 dark:bg-blue-900/50" },
     { title: "Total Siswa Anda", value: "850", icon: UsersIcon, color: "text-green-600 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-900/50" },
     { title: "Diskusi Belum Dibaca", value: "12", icon: ChatBubbleLeftRightIcon, color: "text-orange-600 dark:text-orange-400", bgColor: "bg-orange-100 dark:bg-orange-900/50" },
@@ -38,9 +38,9 @@ const summaryStatsData = {
 };
 
 const newLaunches = [
-  { id: 1, title: "Advanced React Patterns", type: "Kursus", instructor: "Dr. Eva Green", new: true, image: "https://i.pinimg.com/736x/be/23/ef/be23ef97f834d42f46a6c23f73c09934.jpg", href:"/courses/advanced-react-patterns" },
-  { id: 2, title: "Data Science with Python: Module 3", type: "Modul", new: true, image: "https://i.pinimg.com/736x/ec/9e/fa/ec9efafdd84f5a8a71e65d9cd3da935e.jpg", href:"/courses/data-science-python" },
-  { id: 3, title: "UI/UX Design Masterclass", type: "Kursus", instructor: "Alex Johnson", new: false, image: "https://i.pinimg.com/736x/2a/53/70/2a5370c752b7f4bd65766f3550afdb5d.jpg", href:"/courses/ui-ux-design-masterclass" },
+  { id: 1, title: "Advanced React Patterns", type: "Kursus", instructor: "Dr. Eva Green", new: true, image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&h=600&fit=crop", href:"/courses/advanced-react-patterns" },
+  { id: 2, title: "Data Science with Python: Module 3", type: "Modul", new: true, image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop", href:"/courses/data-science-python" },
+  { id: 3, title: "UI/UX Design Masterclass", type: "Kursus", instructor: "Alex Johnson", new: false, image: "https://images.unsplash.com/photo-1561736778-92e52a7769ef?w=800&h=600&fit=crop", href:"/courses/ui-ux-design-masterclass" },
 ];
 
 const latestActivity = [
@@ -63,10 +63,10 @@ const upcomingDeadlines = [
 ];
 
 const newsItems = [
-  { id: 1, title: "Beasiswa Pendidikan 2025 Telah Dibuka!", date: "26 Mei 2025", new: true, category: "Beasiswa", image: "https://i.pinimg.com/736x/30/51/91/3051913846ace310db6e66c5450f8f7b.jpg" },
-  { id: 2, title: "Tips Efektif Belajar Online dari Rumah", date: "25 Mei 2025", new: false, category: "Tips Belajar", image: "https://i.pinimg.com/736x/e1/d6/85/e1d685ad4d2f7bef2c9fd0da126d68b4.jpg" },
-  { id: 3, title: "Update Kurikulum: Fokus pada Keterampilan AI", date: "24 Mei 2025", new: false, category: "Akademik", image: "https://i.pinimg.com/736x/67/d8/3c/67d83c1fb9aab00ec58e0a9820bbb70c.jpg" },
-  { id: 4, title: "Seminar Karir: Mempersiapkan Diri untuk Dunia Kerja", date: "23 Mei 2025", new: true, category: "Karir", image: "https://i.pinimg.com/736x/5a/8c/5c/5a8c5c3d35b9e4a76e1f1e390439f2d5.jpg" },
+  { id: 1, title: "Beasiswa Pendidikan 2025 Telah Dibuka!", date: "26 Mei 2025", new: true, category: "Beasiswa", image: "https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?w=800&h=600&fit=crop" },
+  { id: 2, title: "Tips Efektif Belajar Online dari Rumah", date: "25 Mei 2025", new: false, category: "Tips Belajar", image: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&h=600&fit=crop" },
+  { id: 3, title: "Update Kurikulum: Fokus pada Keterampilan AI", date: "24 Mei 2025", new: false, category: "Akademik", image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=600&fit=crop" },
+  { id: 4, title: "Seminar Karir: Mempersiapkan Diri untuk Dunia Kerja", date: "23 Mei 2025", new: true, category: "Karir", image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop" },
 ];
 
 const lightNotifications = [
@@ -103,7 +103,7 @@ const SectionItemCard = ({ children, className }: { children: React.ReactNode, c
 );
 
 // Tipe untuk data pengguna dari AuthContext
-type UserRole = 'ADMIN' | 'INSTRUCTOR' | 'USER' | string; // Sesuaikan dengan definisi Role Anda
+type UserRole = 'ADMIN' | 'TEACHER' | 'USER';
 
 export default function DashboardPage() {
   const { user, isLoading: isAuthLoading } = useAuth(); // <<< 2. Dapatkan user dan status loading
@@ -111,9 +111,9 @@ export default function DashboardPage() {
   const newsPerPage = 3;
 
   // State untuk data dinamis yang mungkin berbeda per peran
-  const [userSpecificSummary, setUserSpecificSummary] = useState<any[]>([]);
+  const [userSpecificSummary, setUserSpecificSummary] = useState<Array<{title: string, value: string, icon: React.ElementType, color: string, bgColor: string}>>([]);
   const [userOverallProgress, setUserOverallProgress] = useState(0);
-  const [userQuickAccessLinks, setUserQuickAccessLinks] = useState<any[]>([]);
+  const [userQuickAccessLinks, setUserQuickAccessLinks] = useState<Array<{title: string, icon: React.ElementType, href: string}>>([]);
 
   useEffect(() => {
     if (user) {
@@ -129,10 +129,10 @@ export default function DashboardPage() {
             { title: "Laporan & Analitik", icon: ChartBarIcon, href: "/analytics" },
             { title: "Broadcast Notifikasi", icon: BellIcon, href: "/admin/notifications" },
         ]);
-      } else if (user.role === 'INSTRUCTOR') {
+      } else if (user.role === 'TEACHER') {
         setUserOverallProgress(0); // Instruktur mungkin tidak punya progress personal
         setUserQuickAccessLinks([
-            { title: "Kursus Saya", icon: BriefcaseIcon, href: "/courses/my-creations" },
+            { title: "Manage Courses", icon: BriefcaseIcon, href: "/manage-courses" },
             { title: "Manajemen Siswa", icon: UsersIcon, href: "/instructor/students" },
             { title: "Forum Pengajar", icon: ChatBubbleLeftRightIcon, href: "/instructor/forum" },
             { title: "Pendapatan", icon: CurrencyDollarIcon, href: "/instructor/earnings" },
@@ -140,8 +140,8 @@ export default function DashboardPage() {
       } else { // USER
         setUserOverallProgress(75); // Ambil dari data pengguna jika ada
         setUserQuickAccessLinks([
-            { title: "Kursus Saya", icon: BriefcaseIcon, href: "/courses" },
-            { title: "Tugas Saya", icon: DocumentCheckIcon, href: "/assignments" },
+            { title: "Kursus Saya", icon: BriefcaseIcon, href: "/dashboard/my-courses" },
+            { title: "Jelajahi Kursus", icon: BookOpenIcon, href: "/courses" },
             { title: "Forum Diskusi", icon: ChatBubbleLeftRightIcon, href: "/forum" },
             { title: "Sertifikat Saya", icon: StarIcon, href: "/certificates" },
         ]);
@@ -308,7 +308,7 @@ export default function DashboardPage() {
                 </SectionItemCard>
             }
 
-            { (user.role === 'USER' || user.role === 'INSTRUCTOR') && // Tampilkan untuk USER atau INSTRUCTOR
+            { (user.role === 'USER' || user.role === 'TEACHER') && // Tampilkan untuk USER atau TEACHER
                 <SectionItemCard>
                     <h2 className="text-2xl font-bold mb-3 dark:text-neutral-100">Progres Belajar Anda</h2>
                     <div className="flex items-center mb-2">

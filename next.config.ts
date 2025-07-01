@@ -7,16 +7,16 @@ const nextConfig: NextConfig = {
 
   images: {
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'i.pinimg.com',
-        port: '', // Biarkan kosong jika tidak ada port spesifik
-        pathname: '/**', // Izinkan semua path di bawah hostname ini
-      },
+
       {
         protocol: 'https',
         hostname: 'ui-avatars.com', // <<< TAMBAHKAN DOMAIN INI
         pathname: '/api/**',       // Sesuaikan pathname jika perlu, /api/** akan mencakup semua path di bawah /api/
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com', // <<< ADDED FOR UNSPLASH IMAGES
+        pathname: '/**', // Allow all paths under this hostname
       },
       // Anda bisa menambahkan konfigurasi untuk domain lain di sini
       // {

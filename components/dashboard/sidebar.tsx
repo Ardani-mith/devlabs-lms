@@ -7,7 +7,6 @@ import {
   HomeIcon,
   BookOpenIcon,
   UsersIcon,
-  ChatBubbleLeftEllipsisIcon,
   ChartBarIcon,
   CreditCardIcon,
   CogIcon,
@@ -17,6 +16,7 @@ import {
   VideoCameraIcon,
   ShieldCheckIcon, // Contoh ikon untuk halaman admin-only
   UserGroupIcon, // Contoh ikon untuk manajemen pengguna
+  AcademicCapIcon, // Icon untuk course management
 } from "@heroicons/react/24/outline";
 import { useTheme } from "@/hooks/use-theme"; // Pastikan hook ini sudah benar
 import Image from "next/image";
@@ -28,18 +28,18 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   badge?: number;
-  roles: Array<'ADMIN' | 'INSTRUCTOR' | 'USER' | string>; // Sesuaikan dengan tipe peran di AuthContext
+  roles: Array<'ADMIN' | 'TEACHER' | 'USER' | string>; // ✅ Changed INSTRUCTOR to TEACHER
 }
 
 // Daftar SEMUA item navigasi utama beserta peran yang diizinkan
 const allNavigationItems: NavItem[] = [
-  { name: "Dashboard", href: "/dashboard", icon: HomeIcon, roles: ['ADMIN', 'INSTRUCTOR', 'USER'] },
-  { name: "Courses", href: "/courses", icon: BookOpenIcon, roles: ['ADMIN', 'INSTRUCTOR', 'USER'] },
-  { name: "Teachers", href: "/teachers", icon: UsersIcon, roles: ['ADMIN', 'INSTRUCTOR', 'USER'] },
-  { name: "Messages", href: "/messages", icon: ChatBubbleLeftEllipsisIcon, badge: 3, roles: ['ADMIN', 'INSTRUCTOR', 'USER'] },
-  { name: "Webinar", href: "/webinar", icon: VideoCameraIcon, roles: ['ADMIN', 'INSTRUCTOR', 'USER'] },
-  { name: "Analytics", href: "/analytics", icon: ChartBarIcon, roles: ['ADMIN', 'INSTRUCTOR'] },
-  { name: "Payments", href: "/payments", icon: CreditCardIcon, roles: ['ADMIN', 'USER'] }, // Contoh: Admin bisa lihat semua, User lihat miliknya
+  { name: "Dashboard", href: "/dashboard", icon: HomeIcon, roles: ['ADMIN', 'TEACHER', 'USER'] },
+  { name: "Courses", href: "/courses", icon: BookOpenIcon, roles: ['ADMIN', 'TEACHER', 'USER'] },
+  { name: "Manage Courses", href: "/manage-course", icon: AcademicCapIcon, roles: ['ADMIN', 'TEACHER'] },
+  { name: "Teachers", href: "/teachers", icon: UsersIcon, roles: ['USER'] },
+  // { name: "Webinar", href: "/webinar", icon: VideoCameraIcon, roles: ['ADMIN', 'TEACHER', 'USER'] },
+  { name: "Analytics", href: "/analytics", icon: ChartBarIcon, roles: ['ADMIN', 'TEACHER'] },
+  { name: "Payments", href: "/payments", icon: CreditCardIcon, roles: ['USER'] },
   // Contoh item khusus Admin
   { name: "Manajemen Pengguna", href: "/admin/users", icon: UserGroupIcon, roles: ['ADMIN'] },
   { name: "Pengaturan Platform", href: "/admin/platform-settings", icon: ShieldCheckIcon, roles: ['ADMIN'] },
@@ -47,8 +47,8 @@ const allNavigationItems: NavItem[] = [
 
 // Daftar SEMUA item navigasi di bagian bawah beserta peran yang diizinkan
 const allBottomNavigationItems: NavItem[] = [
-    { name: "Support", href: "/support", icon: QuestionMarkCircleIcon, roles: ['ADMIN', 'INSTRUCTOR', 'USER'] },
-    { name: "Settings", href: "/settings", icon: CogIcon, roles: ['ADMIN', 'INSTRUCTOR', 'USER'] }, // Arahkan ke halaman settings utama
+    { name: "Support", href: "/support", icon: QuestionMarkCircleIcon, roles: ['ADMIN', 'TEACHER', 'USER'] },
+    { name: "Settings", href: "/settings", icon: CogIcon, roles: ['ADMIN', 'TEACHER', 'USER'] }, // Arahkan ke halaman settings utama
 ];
 
 export function Sidebar() {
@@ -90,8 +90,8 @@ export function Sidebar() {
           <Image 
             src="/devlab-logo.svg" // Pastikan path logo ini benar
             alt="DevLab Logo"
-            width={32} // Sesuaikan ukuran logo jika perlu
-            height={32}
+            width={160} // Sesuaikan ukuran logo jika perlu
+            height={160}
             priority
           />
         </Link>

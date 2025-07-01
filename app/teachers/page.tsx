@@ -1,168 +1,197 @@
 "use client"; // Diperlukan untuk useState (fitur search/filter)
 
 import React, { useState, useMemo } from 'react';
-import { TeacherDisplayCard, TeacherProfile } from '@/app/teachers/TeacherDisplayCard'; // Sesuaikan path jika berbeda
+import { useAuth } from '@/contexts/AuthContext';
+import TeacherCourseManager from '../manage-course/TeacherCourseManager';
+import { TeacherDisplayCard, TeacherProfile } from '@/app/teachers/TeacherDisplayCard';
 import { MagnifyingGlassIcon, AdjustmentsHorizontalIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 
-// Placeholder data untuk daftar pengajar
-const allTeachersData: TeacherProfile[] = [
+// ✅ Consolidated teacher data - combining both datasets for consistency
+const teachers: TeacherProfile[] = [
+  // Original detailed teachers from /teachers
   {
-    id: "t001",
-    name: "Dr. Ardani Setiawan",
-    avatarUrl: "https://i.pinimg.com/736x/30/ce/7b/30ce7b1af10a76e967c010ead2b62c5a.jpg",
-    expertiseAreas: ["Data Science", "Machine Learning", "Python"],
-    shortBio: "Pakar Data Science dengan pengalaman 10+ tahun di industri dan akademisi. Fokus pada aplikasi AI praktis.",
+    id: "1",
+    name: "Dr. Sarah Williams",
+    avatarUrl: "https://images.unsplash.com/photo-1494790108755-2616b332c2d2?w=400&h=400&fit=crop&crop=face",
+    expertiseAreas: ["React", "TypeScript", "Node.js", "GraphQL"],
+    shortBio: "10+ years experience in frontend development with expertise in React, TypeScript, and modern web technologies.",
     coursesCount: 8,
     lessonsCount: 120,
     rating: 4.9,
     isVerified: true,
-    profileUrl: "/dashboard/teachers/ardani-setiawan",
+    profileUrl: "/teachers/sarah-williams",
   },
   {
-    id: "t002",
-    name: "Dani, M.Kom.",
-    avatarUrl: "https://i.pinimg.com/736x/f4/d3/ca/f4d3ca27e01d6bd08bc1980bdae30b73.jpg",
-    expertiseAreas: ["Web Development", "React", "Node.js", "JavaScript"],
-    shortBio: "Full-stack developer dan instruktur berpengalaman, membantu siswa membangun aplikasi web modern dari nol.",
+    id: "2",
+    name: "Prof. Michael Chen",
+    avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
+    expertiseAreas: ["Python", "TensorFlow", "PyTorch", "Data Analysis"],
+    shortBio: "PhD in Computer Science, specialized in machine learning algorithms and artificial intelligence applications.",
     coursesCount: 12,
-    lessonsCount: 250,
+    lessonsCount: 180,
     rating: 4.8,
     isVerified: true,
-    profileUrl: "/dashboard/teachers/budi-santoso",
+    profileUrl: "/teachers/michael-chen",
   },
   {
-    id: "t003",
-    name: "Prof. Dani",
-    avatarUrl: "https://i.pinimg.com/736x/2a/53/70/2a5370c752b7f4bd65766f3550afdb5d.jpg",
-    expertiseAreas: ["UI/UX Design", "Figma", "Prototyping"],
-    shortBio: "Desainer UI/UX pemenang penghargaan dengan passion untuk menciptakan pengalaman pengguna yang intuitif dan indah.",
+    id: "3",
+    name: "Emma Rodriguez",
+    avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face", 
+    expertiseAreas: ["Figma", "Adobe XD", "Prototyping", "User Research"],
+    shortBio: "Award-winning designer with 8 years experience creating intuitive and beautiful user interfaces for top companies.",
     coursesCount: 6,
     lessonsCount: 95,
-    rating: 4.7,
-    profileUrl: "/dashboard/teachers/citra-dewi",
+    rating: 4.9,
+    isVerified: true,
+    profileUrl: "/teachers/emma-rodriguez",
   },
   {
-    id: "t004",
-    name: "Sir Dani",
-    avatarUrl: null, // Contoh tanpa avatar, akan menampilkan inisial
-    expertiseAreas: ["Digital Marketing", "SEO", "Content Strategy"],
-    shortBio: "Spesialis Digital Marketing yang membantu bisnis bertumbuh secara online melalui strategi yang terukur.",
+    id: "4",
+    name: "David Kim",
+    avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop&crop=face",
+    expertiseAreas: ["AWS", "Docker", "Kubernetes", "CI/CD"],
+    shortBio: "Expert in cloud infrastructure, containerization, and CI/CD pipelines with experience at major tech companies.",
+    coursesCount: 10,
+    lessonsCount: 150,
+    rating: 4.7,
+    isVerified: true,
+    profileUrl: "/teachers/david-kim",
+  },
+  {
+    id: "5",
+    name: "Lisa Thompson",
+    avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop&crop=face",
+    expertiseAreas: ["SEO", "Google Ads", "Social Media", "Analytics"],
+    shortBio: "Marketing professional with proven track record in digital strategy, social media marketing, and SEO optimization.",
     coursesCount: 7,
     lessonsCount: 110,
+    rating: 4.8,
     isVerified: true,
-    profileUrl: "/dashboard/teachers/eko-prasetyo",
+    profileUrl: "/teachers/lisa-thompson",
   },
-   {
-    id: "t005",
-    name: "Fiona Anggraini",
-    avatarUrl: "https://i.pinimg.com/736x/46/d8/dd/46d8dd0b665770c3a0b1d161571f5f93.jpg",
-    expertiseAreas: ["Bahasa Inggris", "TOEFL Prep", "Business English"],
-    shortBio: "Pengajar Bahasa Inggris bersertifikat dengan metode pengajaran yang interaktif dan menyenangkan.",
-    coursesCount: 10,
-    lessonsCount: 180,
-    rating: 4.9,
-    profileUrl: "/dashboard/teachers/fiona-anggraini",
+  // ✅ Added teachers from /teachers/directory for completeness
+  {
+    id: "6",
+    name: "Teacher One",
+    avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
+    expertiseAreas: ["React", "TypeScript", "Web Development"],
+    shortBio: "Experienced web developer specializing in modern frontend technologies and full-stack development.",
+    coursesCount: 5,
+    lessonsCount: 45,
+    rating: 4.8,
+    isVerified: true,
+    profileUrl: "/teachers/teacher-one",
   },
   {
-    id: "t006",
-    name: "Gilang Maulana",
-    avatarUrl: "https://i.pinimg.com/736x/1c/cf/63/1ccf63e85c4574a24621ac587c831b5e.jpg",
-    expertiseAreas: ["Manajemen Proyek", "Agile", "Scrum"],
-    shortBio: "Manajer proyek berpengalaman yang membagikan praktik terbaik untuk mengelola proyek dengan sukses.",
-    coursesCount: 5,
-    lessonsCount: 75,
+    id: "7",
+    name: "ZerooKnow",
+    avatarUrl: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=400&fit=crop&crop=face",
+    expertiseAreas: ["Full Stack", "DevOps", "System Architecture"],
+    shortBio: "Senior developer and platform architect with expertise in scalable web applications and cloud infrastructure.",
+    coursesCount: 7,
+    lessonsCount: 78,
+    rating: 4.9,
     isVerified: true,
-    rating: 4.6,
-    profileUrl: "/dashboard/teachers/gilang-maulana",
-  },
+    profileUrl: "/teachers/zerooknow",
+  }
 ];
 
 const expertiseCategories = ["Semua Kategori", "Data Science", "Web Development", "UI/UX Design", "Digital Marketing", "Bahasa Inggris", "Manajemen Proyek"];
 
-
-export default function TeachersPage() {
+function TeacherDirectoryView() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua Kategori");
-  // Untuk pagination, Anda bisa menambahkan state untuk currentPage dan itemsPerPage
 
   const filteredTeachers = useMemo(() => {
-    return allTeachersData
-      .filter(teacher =>
-        teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        teacher.expertiseAreas.some(area => area.toLowerCase().includes(searchTerm.toLowerCase()))
+    return teachers.filter(teacher =>
+      teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      teacher.expertiseAreas.some(area => 
+        area.toLowerCase().includes(searchTerm.toLowerCase())
       )
-      .filter(teacher =>
-        selectedCategory === "Semua Kategori" ||
-        teacher.expertiseAreas.includes(selectedCategory)
-      );
+    ).filter(teacher =>
+      selectedCategory === "Semua Kategori" || 
+      teacher.expertiseAreas.some(area => 
+        area.toLowerCase().includes(selectedCategory.toLowerCase())
+      )
+    );
   }, [searchTerm, selectedCategory]);
 
   return (
     <div className="space-y-10 p-4 sm:p-6 lg:p-8 text-text-light-primary dark:text-text-dark-primary">
-      {/* Header Halaman */}
+      {/* Header */}
       <header className="mb-12">
-        <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-neutral-100 sm:text-5xl">
-          Temukan Pengajar Ahli Kami
+        <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-neutral-100 sm:text-5xl">
+          Instruktur Berpengalaman
         </h1>
-        <p className="mt-3 text-base text-gray-600 dark:text-neutral-400 max-w-2xl">
-          Jelajahi daftar pengajar profesional kami yang siap membantu Anda mencapai tujuan belajar.
-          Filter berdasarkan keahlian atau cari berdasarkan nama.
+        <p className="mt-3 text-base text-gray-600 dark:text-neutral-400 max-w-3xl">
+          Belajar langsung dari para ahli di bidangnya. Instruktur kami adalah profesional berpengalaman 
+          yang siap membimbing perjalanan belajar Anda.
         </p>
       </header>
 
-      {/* Fitur Search dan Filter */}
-      <div className="sticky top-[calc(var(--header-height,4rem)+1rem)] z-30 bg-gray-50/80 dark:bg-neutral-900/80 backdrop-blur-md py-4 rounded-xl shadow-sm mb-8 -mx-4 px-4 md:-mx-6 md:px-6"> {/* Sticky dengan backdrop blur */}
+      {/* Search and Filter */}
+      <div className="bg-gray-50/90 dark:bg-neutral-900/90 backdrop-blur-lg py-5 rounded-xl shadow-lg mb-10">
         <div className="flex flex-col md:flex-row gap-4 items-center">
           <div className="relative flex-grow w-full md:w-auto">
             <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-neutral-500 pointer-events-none" />
             <input
               type="search"
-              placeholder="Cari nama atau keahlian pengajar..."
+              placeholder="Cari instruktur atau keahlian..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm focus:ring-2 focus:ring-brand-purple dark:focus:ring-purple-500 focus:border-transparent transition-shadow focus:shadow-md"
+              className="w-full pl-12 pr-4 py-3.5 rounded-lg border border-gray-300 dark:border-neutral-600/80 bg-white dark:bg-neutral-800 text-sm focus:ring-2 focus:ring-brand-purple dark:focus:ring-purple-500 focus:border-transparent transition-shadow focus:shadow-lg"
             />
           </div>
-          <div className="relative w-full md:w-auto md:min-w-[200px]">
-            <AdjustmentsHorizontalIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-neutral-500 pointer-events-none" />
+          <div className="relative w-full md:w-auto">
+            <AdjustmentsHorizontalIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-neutral-500 pointer-events-none" />
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full appearance-none pl-12 pr-10 py-3 rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm focus:ring-2 focus:ring-brand-purple dark:focus:ring-purple-500 focus:border-transparent transition-shadow focus:shadow-md"
+              className="w-full appearance-none pl-10 pr-8 py-3.5 rounded-lg border border-gray-300 dark:border-neutral-600/80 bg-white dark:bg-neutral-800 text-sm focus:ring-2 focus:ring-brand-purple dark:focus:ring-purple-500 focus:border-transparent"
             >
               {expertiseCategories.map(category => (
                 <option key={category} value={category}>{category}</option>
               ))}
             </select>
-            <ChevronDownIcon className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-neutral-500 pointer-events-none" />
+            <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-neutral-500 pointer-events-none" />
           </div>
         </div>
       </div>
 
-      {/* Grid Daftar Pengajar */}
-      {filteredTeachers.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredTeachers.map((teacher) => (
-            <TeacherDisplayCard key={teacher.id} teacher={teacher} />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <UserCircleIcon className="mx-auto h-16 w-16 text-gray-400 dark:text-neutral-600" />
-          <h3 className="mt-2 text-xl font-semibold text-gray-900 dark:text-neutral-200">Pengajar Tidak Ditemukan</h3>
-          <p className="mt-1 text-sm text-gray-500 dark:text-neutral-400">
-            Coba ubah kata kunci pencarian atau filter Anda.
-          </p>
-        </div>
-      )}
+      {/* Teachers Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {filteredTeachers.map((teacher) => (
+          <TeacherDisplayCard 
+            key={teacher.id} 
+            teacher={teacher}
+          />
+        ))}
+      </div>
 
-      {/* Placeholder untuk Pagination atau Infinite Scroll */}
-      {/* <div className="mt-12 flex justify-center">
-        <button className="px-6 py-2 border border-transparent text-base font-medium rounded-md text-white bg-brand-purple hover:bg-purple-700">
-          Muat Lebih Banyak
+      {/* Call to Action */}
+      <div className="mt-16 text-center bg-gradient-to-r from-brand-purple/10 to-purple-600/10 dark:from-purple-500/20 dark:to-purple-800/20 rounded-2xl p-8">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-neutral-100 mb-4">
+          Ingin Menjadi Instruktur?
+        </h2>
+        <p className="text-gray-600 dark:text-neutral-400 mb-6 max-w-2xl mx-auto">
+          Bergabunglah dengan komunitas instruktur kami dan bagikan keahlian Anda kepada ribuan siswa di seluruh dunia.
+        </p>
+        <button className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-brand-purple hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors">
+          Daftar Sebagai Instruktur
         </button>
       </div>
-      */}
     </div>
   );
+}
+
+export default function TeachersPage() {
+  const { user } = useAuth();
+
+  // If user is a teacher or admin, show course management
+  if (user && (user.role === 'TEACHER' || user.role === 'ADMIN')) {
+    return <TeacherCourseManager />;
+  }
+
+  // Otherwise show public teacher directory
+  return <TeacherDirectoryView />;
 }

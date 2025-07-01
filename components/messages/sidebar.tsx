@@ -20,8 +20,8 @@ import { useTheme } from "@/hooks/use-theme"; // Pastikan hook ini sudah benar
 const navigationItems = [
   { name: "Dashboard", href: "/dashboard", icon: HomeIcon },
   { name: "Courses", href: "/courses", icon: BookOpenIcon },
-  { name: "Teachers", href: "/teachers", icon: UsersIcon },
-  { name: "Messages", href: "/messages", icon: ChatBubbleLeftEllipsisIcon, badge: 3 }, // Angka badge bisa dinamis
+  { name: "Teachers", href: "/teachers", icon: UsersIcon }, // ✅ Simplified - /teachers handles role-based logic
+  { name: "Messages", href: "/messages", icon: ChatBubbleLeftEllipsisIcon, badge: 3 },
   { name: "Analytics", href: "/analytics", icon: ChartBarIcon },
   { name: "Payments", href: "/payments", icon: CreditCardIcon }, // Menggunakan CreditCardIcon
 ];

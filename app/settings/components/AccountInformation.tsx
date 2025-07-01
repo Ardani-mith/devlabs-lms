@@ -4,11 +4,10 @@
 
 "use client";
 
-import React, { useState, useEffect, FormEvent } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { PencilIcon, CheckIcon, XMarkIcon, UserCircleIcon as DefaultAvatarIcon } from '@heroicons/react/24/solid';
+import { PencilIcon, CheckIcon, XMarkIcon, UserCircleIcon as DefaultAvatarIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '@/contexts/AuthContext';
-import { CheckCircleIcon as CheckCircleLucide, XCircleIcon as XCircleLucide } from 'lucide-react'; // Menggunakan Lucide untuk konsistensi notifikasi
 
 // Placeholder Komponen UI (ganti dengan komponen Aceternity UI asli Anda)
 const InputField = ({ label, id, type = "text", value, name, onChange, disabled, placeholder, required, error, helperText }: { label: string, id: string, type?: string, value: string, name: string, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, disabled?: boolean, placeholder?: string, required?: boolean, error?: string, helperText?: string }) => (
@@ -210,7 +209,7 @@ export default function AccountInformation() {
         <div className={`mb-6 p-3 rounded-md text-sm flex items-center shadow-md ${
             saveStatus === 'success' ? 'bg-green-100 dark:bg-green-700/30 text-green-700 dark:text-green-300' : 
                                        'bg-red-100 dark:bg-red-700/30 text-red-700 dark:text-red-300'}`}>
-          {saveStatus === 'success' ? <CheckCircleLucide className="h-5 w-5 mr-2"/> : <XCircleLucide className="h-5 w-5 mr-2"/>}
+          {saveStatus === 'success' ? <CheckCircleIcon className="h-5 w-5 mr-2"/> : <XCircleIcon className="h-5 w-5 mr-2"/>}
           {saveStatus === 'success' ? 'Profil berhasil diperbarui!' : errors.general || "Gagal menyimpan perubahan."}
         </div>
       )}
@@ -246,7 +245,7 @@ export default function AccountInformation() {
             <label htmlFor="bio" className="block text-sm font-semibold text-gray-700 dark:text-neutral-300 mb-1.5">Bio Singkat</label>
             <textarea name="bio" id="bio" rows={4} value={formData.bio} onChange={handleChange} disabled={!isEditing} className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700/60 text-sm focus:ring-2 focus:ring-brand-purple dark:focus:ring-purple-500 focus:border-transparent shadow-sm transition-colors min-h-[100px] placeholder-neutral-400 dark:placeholder-neutral-500 text-neutral-900 dark:text-neutral-100" placeholder="Ceritakan sedikit tentang diri Anda..."/>
           </div>
-           <div className="md:col-span-2"> <InputField label="Peran" id="role" name="role" value={user.role || ''} disabled={true}/> </div>
+           <div className="md:col-span-2"> <InputField label="Peran" id="role" name="role" value={user.role || ''} onChange={() => {}} disabled={true}/> </div>
         </div>
       </form>
     </div>

@@ -4,10 +4,18 @@ import { Fragment } from 'react';
 import { MagnifyingGlassIcon, BellIcon, UserCircleIcon, HeartIcon } from '@heroicons/react/24/outline';
 import { Menu, Transition } from '@headlessui/react'; // Contoh untuk dropdown user
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import Image from 'next/image';
+import Link from 'next/link';
 // Aceternity UI mungkin memiliki komponen "Navbar" atau "Header" yang bisa diadaptasi.
 
 export function Header() {
   // Logika untuk search, notifikasi, user info
+  const { user, logout } = useAuth(); // Dapatkan user data dan logout function
+  
+  const handleLogout = () => {
+    logout();
+  };
 
   return (
     <header className="sticky top-0 z-40 flex h-20 flex-shrink-0 items-center justify-between border-b border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
@@ -61,8 +69,18 @@ export function Header() {
             <Menu.Button className="relative flex max-w-xs items-center rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-brand-purple focus:ring-offset-2 dark:focus:ring-offset-neutral-800">
               <span className="absolute -inset-1.5" />
               <span className="sr-only">Open user menu</span>
-              {/* Ganti dengan Avatar user jika ada */}
-              <UserCircleIcon className="h-8 w-8 rounded-full text-gray-400 dark:text-neutral-400" />
+              {/* Display user avatar if available, otherwise use default icon */}
+              {user?.avatarUrl ? (
+                <Image
+                  src={user.avatarUrl}
+                  alt={user.name || user.username}
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 rounded-full object-cover"
+                />
+              ) : (
+                <UserCircleIcon className="h-8 w-8 rounded-full text-gray-400 dark:text-neutral-400" />
+              )}
               <ChevronDownIcon className="ml-1 h-5 w-5 text-gray-400 dark:text-neutral-400" aria-hidden="true" />
             </Menu.Button>
           </div>
@@ -78,32 +96,22 @@ export function Header() {
             <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white dark:bg-neutral-700 py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
               <Menu.Item>
                 {({ active }) => (
-                  <a
-                    href="#"
-                    className={`${active ? 'bg-gray-100 dark:bg-neutral-600' : ''} block px-4 py-2 text-sm text-text-light-primary dark:text-text-dark-primary`}
-                  >
-                    Your Profile
-                  </a>
-                )}
-              </Menu.Item>
-              <Menu.Item>
-                {({ active }) => (
-                  <a
-                    href="#"
-                    className={`${active ? 'bg-gray-100 dark:bg-neutral-600' : ''} block px-4 py-2 text-sm text-text-light-primary dark:text-text-dark-primary`}
+                  <Link
+                    href="/settings"
+                    className={`${active ? 'bg-gray-100 dark:bg-neutral-600' : ''} block px-4 py-2 text-sm text-text-light-primary dark:text-text-dark-primary hover:bg-gray-100 dark:hover:bg-neutral-600 transition-colors`}
                   >
                     Settings
-                  </a>
+                  </Link>
                 )}
               </Menu.Item>
               <Menu.Item>
                 {({ active }) => (
-                  <a
-                    href="#" // Ganti dengan fungsi logout
-                    className={`${active ? 'bg-gray-100 dark:bg-neutral-600' : ''} block px-4 py-2 text-sm text-text-light-primary dark:text-text-dark-primary`}
+                  <button
+                    onClick={handleLogout}
+                    className={`${active ? 'bg-gray-100 dark:bg-neutral-600' : ''} block w-full text-left px-4 py-2 text-sm text-text-light-primary dark:text-text-dark-primary hover:bg-gray-100 dark:hover:bg-neutral-600 transition-colors`}
                   >
                     Sign out
-                  </a>
+                  </button>
                 )}
               </Menu.Item>
             </Menu.Items>

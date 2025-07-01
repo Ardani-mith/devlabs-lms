@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function ManageCoursesPage() {
   const { user } = useAuth();
 
-  if (user?.role !== 'ADMIN' && user?.role !== 'INSTRUCTOR') {
+  if (user?.role !== 'ADMIN' && user?.role !== 'TEACHER') {
     return <p>Anda tidak memiliki akses ke halaman ini.</p>; // Atau redirect
   }
 
@@ -14,7 +14,7 @@ export default function ManageCoursesPage() {
       {user?.role === 'ADMIN' && (
         <button>Buat Kursus Baru untuk Instruktur Lain</button>
       )}
-      {user?.role === 'INSTRUCTOR' && (
+      {user?.role === 'TEACHER' && (
         <button>Buat Kursus Baru Saya</button>
       )}
       {/* ... Daftar kursus yang bisa dikelola ... */}

@@ -12,7 +12,7 @@ export interface User {
   id: number;
   username: string;
   email: string;
-  role: 'ADMIN' | 'INSTRUCTOR' | 'USER' | string;
+  role: 'ADMIN' | 'TEACHER' | 'USER';
   name?: string;
   avatarUrl?: string; // Pastikan ini ada
   bio?: string;       // Pastikan ini ada
@@ -37,44 +37,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true); // Mulai dengan loading true saat aplikasi pertama kali dimuat
   const [mounted, setMounted] = useState(false);
 
-  // Fungsi terpusat untuk mengambil profil pengguna dari backend
   const fetchUserProfile = async (accessToken: string) => {
-    // Jangan set loading true di sini jika dipanggil dari login (sudah dihandle)
-    // setIsloading(true) akan menyebabkan flicker saat refresh data setelah update profil.
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/profile/me`, { // Gunakan endpoint /auth/profile atau /users/profile/me
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/profile`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` },
       });
-
+  
       if (!response.ok) {
-        throw new Error('Gagal mengambil profil pengguna atau token tidak valid.');
+        throw new Error('Failed to fetch user profile');
       }
-
-      const userDataFromApi = await response.json();
-      
-      const mappedUser: User = {
-        id: userDataFromApi.Id || userDataFromApi.sub,
-        username: userDataFromApi.username,
-        email: userDataFromApi.email,
-        role: userDataFromApi.role,
-        name: userDataFromApi.name || userDataFromApi.username,
-        avatarUrl: userDataFromApi.avatarUrl,
-        bio: userDataFromApi.bio,
-        department: userDataFromApi.department,
-      };
-
-      setUser(mappedUser);
+  
+      const userData = await response.json();
+      setUser(userData);
       setToken(accessToken);
-      if (typeof window !== "undefined") {
-        localStorage.setItem('accessToken', accessToken);
-      }
+      localStorage.setItem('accessToken', accessToken);
     } catch (error) {
       console.error("Error fetching user profile:", error);
-      logout(); // Logout jika token tidak valid
+      logout();
     } finally {
-      setIsLoading(false); // Selalu set loading false setelah selesai
+      setIsLoading(false);
     }
   };
   

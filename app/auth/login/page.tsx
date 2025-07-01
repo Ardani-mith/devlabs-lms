@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'; // Gunakan dari next/navigation unt
 import { ArrowRightIcon, LockClosedIcon, UserIcon as AtSymbolIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/solid';
 import { FcGoogle } from 'react-icons/fc'; // Contoh ikon Google dari react-icons
 import { FaMicrosoft } from 'react-icons/fa'; // Contoh ikon Microsoft dari react-icons
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
 // Placeholder untuk komponen Input dan Button dari Aceternity UI
 // Anda perlu mengimpornya dari path yang benar jika sudah ada di proyek Anda
@@ -69,48 +70,34 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { login } = useAuth(); // Get login function from AuthContext
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
     setError(null);
-
+  
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      console.log('API URL being used:', apiUrl); // <-- Tambahkan ini
-      if (!apiUrl) {
-        setError("Kesalahan konfigurasi: API URL tidak ditemukan. Periksa file .env.local Anda.");
-        setIsLoading(false);
-        return;
-      }
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, { // Pastikan NEXT_PUBLIC_API_URL sudah di-set di .env.local
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }), // backend expects username, not email
       });
-
+  
       const data = await response.json();
-
+  
       if (!response.ok) {
-        throw new Error(data.message || 'Login gagal. Periksa kembali username dan password Anda.');
+        throw new Error(data.message || 'Login failed');
       }
-
-      // Asumsi backend mengembalikan access_token
+  
       if (data.access_token) {
-        // Simpan token (misalnya di localStorage atau state management)
-        localStorage.setItem('accessToken', data.access_token);
-        // Tambahkan logika untuk menyimpan info user jika ada, atau fetch dari endpoint /auth/profile
-        console.log('Login berhasil, token:', data.access_token);
-        // Redirect ke dashboard
+        // Use AuthContext login method
+        await login(data.access_token);
         router.push('/dashboard');
-      } else {
-        throw new Error('Format respons tidak sesuai.');
       }
-
-    } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan. Silakan coba lagi.');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

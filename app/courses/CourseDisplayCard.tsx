@@ -4,11 +4,7 @@ import {
   BookOpenIcon, // General course icon
   ClockIcon,    // For duration
   UserCircleIcon, // For instructor
-  ChartBarIcon, // For level
   StarIcon,     // For rating
-  TagIcon,      // For category
-  SparklesIcon, // For new/featured
-  CurrencyDollarIcon // For price
 } from "@heroicons/react/24/solid";
 
 export interface CourseDetails {
@@ -24,7 +20,7 @@ export interface CourseDetails {
   rating?: number;
   studentsEnrolled?: number;
   price?: number | "Gratis";
-  courseUrl: string;
+  courseUrl?: string; // Make this optional
   isNew?: boolean;
   tags?: string[];
 }
@@ -40,12 +36,18 @@ export function CourseDisplayCard({ course }: CourseDisplayCardProps) {
     course.level === "Lanjutan" ? "bg-red-100 dark:bg-red-700/30 text-red-700 dark:text-red-300" :
     "bg-blue-100 dark:bg-blue-700/30 text-blue-700 dark:text-blue-300";
 
+  // Generate course URL dynamically if not provided
+  const courseHref = course.courseUrl || `/courses/${course.id}`;
+
   return (
-    <Link href={course.courseUrl} className="group block">
+    <Link href={courseHref} className="group block">
       <div className="relative flex flex-col bg-white dark:bg-transparent border border-gray-200 dark:border-transparent rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 ease-in-out transform hover:-translate-y-1.5 overflow-hidden h-full">
         <div className="relative w-full h-48 sm:h-52">
           <Image
-            src={course.thumbnailUrl || "https://i.pinimg.com/736x/67/d8/3c/67d83c1fb9aab00ec58e0a9820bbb70c.jpg"} // Fallback image
+            src={course.thumbnailUrl?.includes('i.pinimg.com') 
+              ? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=600&fit=crop'
+              : course.thumbnailUrl || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=600&fit=crop"
+            } // Fallback image with Pinterest detection
             alt={course.title}
             layout="fill"
             className="object-cover group-hover:scale-100 transition-transform duration-500 ease-in-out"
@@ -72,7 +74,16 @@ export function CourseDisplayCard({ course }: CourseDisplayCardProps) {
 
           <div className="flex items-center text-xs text-gray-600 dark:text-neutral-400 mb-3">
             {course.instructorAvatarUrl ? (
-              <Image src={course.instructorAvatarUrl} alt={course.instructorName} width={20} height={20} className="rounded-full mr-1.5 object-cover"/>
+              <Image 
+                src={course.instructorAvatarUrl?.includes('i.pinimg.com') 
+                  ? 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face'
+                  : course.instructorAvatarUrl
+                } 
+                alt={course.instructorName} 
+                width={20} 
+                height={20} 
+                className="rounded-full mr-1.5 object-cover"
+              />
             ) : (
               <UserCircleIcon className="h-5 w-5 mr-1.5 text-gray-400 dark:text-neutral-500"/>
             )}

@@ -6,7 +6,17 @@
 
 import Link from 'next/link';
 import { useSearchParams, usePathname } from 'next/navigation';
-import { Icon as LucideIcon, User, ShieldCheck, Palette, Puzzle, CreditCard, Bell } from 'lucide-react';
+import { 
+  UserIcon, 
+  ShieldCheckIcon, 
+  SwatchIcon as PaletteIcon, 
+  PuzzlePieceIcon, 
+  CreditCardIcon, 
+  BellIcon
+} from '@heroicons/react/24/outline';
+import React from 'react';
+
+type IconComponent = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
 interface NavItem {
   name: string;
@@ -18,14 +28,14 @@ interface SettingsHorizontalNavigationProps {
   navItems: NavItem[];
 }
 
-// Pemetaan dari nama string ke komponen ikon Lucide
-const iconComponents: { [key: string]: LucideIcon } = {
-  User,
-  ShieldCheck,
-  Palette,
-  Puzzle,
-  CreditCard,
-  Bell,
+// Pemetaan dari nama string ke komponen ikon
+const iconComponents: { [key: string]: IconComponent } = {
+  User: UserIcon,
+  ShieldCheck: ShieldCheckIcon,
+  Palette: PaletteIcon,
+  Puzzle: PuzzlePieceIcon,
+  CreditCard: CreditCardIcon,
+  Bell: BellIcon,
 };
 
 export function SettingsHorizontalNavigation({ navItems }: SettingsHorizontalNavigationProps) {

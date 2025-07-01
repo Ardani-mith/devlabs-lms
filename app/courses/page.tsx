@@ -1,64 +1,29 @@
-
 "use client";
 
-import React, { useState, useMemo } from 'react';
-import { CourseDisplayCard, CourseDetails } from '@/app/courses/CourseDisplayCard'; // Pastikan path ini benar
+import React, { useState, useMemo, useEffect } from 'react';
+import { CourseDisplayCard } from '@/app/courses/CourseDisplayCard'; // Pastikan path ini benar
 import { MagnifyingGlassIcon, AdjustmentsHorizontalIcon, ChevronDownIcon, FunnelIcon, XMarkIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 import { BookOpenIcon as NoCourseIcon } from '@heroicons/react/24/solid';
 
+// Course interface definition
+interface Course {
+  id: string;
+  title: string;
+  thumbnailUrl: string;
+  instructorName: string;
+  instructorAvatarUrl?: string;
+  category: string;
+  lessonsCount: number;
+  totalDurationHours: number;
+  level: "Pemula" | "Menengah" | "Lanjutan" | "Semua Level";
+  rating?: number;
+  studentsEnrolled?: number;
+  price?: number | "Gratis";
+  courseUrl?: string;
+  isNew?: boolean;
+  tags?: string[];
+}
 
-const allCoursesData: CourseDetails[] = [
-  {
-    id: "c001",
-    title: "Ultimate Web Development Bootcamp 2025",
-    thumbnailUrl: "https://i.pinimg.com/736x/be/23/ef/be23ef97f834d42f46a6c23f73c09934.jpg",
-    instructorName: "Budi Santoso, M.Kom.",
-    instructorAvatarUrl: "https://i.pinimg.com/736x/f4/d3/ca/f4d3ca27e01d6bd08bc1980bdae30b73.jpg",
-    category: "Web Development",
-    lessonsCount: 150,
-    totalDurationHours: 45,
-    level: "Semua Level",
-    rating: 4.8,
-    studentsEnrolled: 1250,
-    price: 750000,
-    courseUrl: "/courses/ultimate-web-development-bootcamp-2025",
-    isNew: true,
-    tags: ["React", "Node.js", "Full-stack"]
-  },
-  {
-    id: "c002",
-    title: "Data Science & Machine Learning with Python",
-    thumbnailUrl: "https://i.pinimg.com/736x/ec/9e/fa/ec9efafdd84f5a8a71e65d9cd3da935e.jpg",
-    instructorName: "Dr. Arini Kusuma",
-    instructorAvatarUrl: "https://i.pinimg.com/736x/30/ce/7b/30ce7b1af10a76e967c010ead2b62c5a.jpg",
-    category: "Data Science",
-    lessonsCount: 120,
-    totalDurationHours: 38,
-    level: "Menengah",
-    rating: 4.9,
-    studentsEnrolled: 980,
-    price: 850000,
-    courseUrl: "/courses/data-science-machine-learning-python", // slug: data-science-machine-learning-python
-    tags: ["Python", "Pandas", "Scikit-learn"]
-  },
-  {
-    id: "c003",
-    title: "Dasar-Dasar Desain UI/UX untuk Pemula",
-    thumbnailUrl: "https://i.pinimg.com/736x/2a/53/70/2a5370c752b7f4bd65766f3550afdb5d.jpg",
-    instructorName: "Citra Dewi Lestari",
-    instructorAvatarUrl: "https://i.pinimg.com/736x/2a/53/70/2a5370c752b7f4bd65766f3550afdb5d.jpg",
-    category: "UI/UX Design",
-    lessonsCount: 60,
-    totalDurationHours: 15,
-    level: "Pemula",
-    rating: 4.7,
-    studentsEnrolled: 2100,
-    price: "Gratis",
-    courseUrl: "/courses/dasar-desain-ui-ux-pemula", // slug: dasar-desain-ui-ux-pemula
-    isNew: true,
-  },
-  // Tambahkan data kursus lainnya dengan format courseUrl yang serupa
-];
 
 const courseCategories = ["Semua Kategori", "Web Development", "Data Science", "UI/UX Design", "Digital Marketing", "Bahasa", "Manajemen", "Bisnis"];
 const courseLevels = ["Semua Level", "Pemula", "Menengah", "Lanjutan"];
@@ -69,9 +34,10 @@ export default function CoursesPage() {
   const [selectedCategory, setSelectedCategory] = useState("Semua Kategori");
   const [selectedLevel, setSelectedLevel] = useState("Semua Level");
   const [showFilters, setShowFilters] = useState(false);
+  const [courses, setCourses] = useState<Course[]>([]);
 
   const filteredCourses = useMemo(() => {
-    return allCoursesData
+    return courses
       .filter(course =>
         course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         course.instructorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -83,7 +49,21 @@ export default function CoursesPage() {
       .filter(course =>
         selectedLevel === "Semua Level" || course.level === selectedLevel
       );
-  }, [searchTerm, selectedCategory, selectedLevel]);
+  }, [searchTerm, selectedCategory, selectedLevel, courses]);
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`);
+        const courseData = await response.json();
+        setCourses(courseData);
+      } catch (error) {
+        console.error('Error fetching courses:', error);
+      }
+    };
+    
+    fetchCourses();
+  }, []);
 
   return (
     <div className="space-y-10 p-4 sm:p-6 lg:p-8 text-text-light-primary dark:text-text-dark-primary">
