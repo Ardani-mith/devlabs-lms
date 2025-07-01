@@ -1,8 +1,9 @@
-export default function CourseDetailPage({ params }: { params: { slug: string } }) {
+export default async function CourseDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params;
     return (
       <div>
         <h1>Halaman Detail Kursus</h1>
-        <p>Slug: {params.slug}</p>
+        <p>Slug: {slug}</p>
       </div>
     );
   }

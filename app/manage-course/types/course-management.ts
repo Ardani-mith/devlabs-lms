@@ -1,28 +1,47 @@
 import { BaseContent } from '@/lib/types/content';
 
 export interface TeacherCourse extends BaseContent {
-  instructorName?: string;
+  id: string;
+  title: string;
+  description: string;
+  thumbnailUrl: string;
+  // YouTube specific fields
+  youtubeEmbedUrl?: string;
+  youtubeVideoId?: string;
+  youtubeThumbnailFile?: File | null;
+  youtubeThumbnailUrl?: string;
+  category: string;
   level: 'Pemula' | 'Menengah' | 'Lanjutan';
-  price: number | "Gratis";
-  rating?: number;
+  price: number | 'Gratis';
+  published: boolean;
+  isNew: boolean;
+  tags: string[];
   studentsEnrolled: number;
   lessonsCount: number;
   totalDurationHours: number;
-  isNew: boolean;
-  published?: boolean;
-  createdAt?: string;
-  tags?: string[];
+  rating?: number;
+  createdAt: string;
+  updatedAt: string;
+  instructorName: string;
+  instructorId: string;
 }
 
 export interface CourseFormData {
   title: string;
   description: string;
   thumbnailUrl: string;
+  // YouTube specific fields
+  youtubeEmbedUrl: string;
+  youtubeVideoId: string;
+  youtubeThumbnailFile: File | null;
+  youtubeThumbnailUrl: string;
   category: string;
   level: 'Pemula' | 'Menengah' | 'Lanjutan';
   price: number;
-  tags: string[];
   published: boolean;
+  tags: string[];
+  lessonsCount: number;
+  totalDurationHours: number;
 }
 
 export interface CourseStats {
@@ -33,17 +52,20 @@ export interface CourseStats {
 }
 
 export interface NotificationData {
+  id: string;
   type: 'success' | 'error' | 'info';
   message: string;
+  timestamp: number;
 }
 
 export interface CourseManagementConfig {
-  enableStats: boolean;
-  enableCRUD: boolean;
-  enableBulkActions: boolean;
-  defaultCategory: string;
+  itemsPerPage: number;
+  allowedRoles: string[];
   categories: string[];
-  showDrafts: boolean;
+  maxFileSize: number; // for YouTube thumbnail upload in bytes
+  allowedImageTypes: string[];
+  youtubeApiKey?: string; // for YouTube integration
+  enableStats: boolean; // for showing statistics grid
 }
 
 export interface CourseManagementState {
@@ -56,4 +78,37 @@ export interface CourseManagementState {
   notification: NotificationData | null;
   formData: CourseFormData;
   tagInput: string;
+  stats: CourseStats;
+  config: CourseManagementConfig;
+  // File upload states
+  uploadingThumbnail: boolean;
+  thumbnailPreview: string | null;
+}
+
+export interface YouTube {
+  videoId: string;
+  title: string;
+  description: string;
+  thumbnailUrl: string;
+  duration: string;
+  publishedAt: string;
+}
+
+export interface YouTubeEmbedProps {
+  videoId: string;
+  width?: number;
+  height?: number;
+  autoplay?: boolean;
+  controls?: boolean;
+  modestbranding?: boolean;
+}
+
+// Role-based access interface
+export interface UserPermissions {
+  canCreateCourse: boolean;
+  canEditCourse: boolean;
+  canDeleteCourse: boolean;
+  canPublishCourse: boolean;
+  canUploadThumbnail: boolean;
+  canManageYouTubeContent: boolean;
 } 

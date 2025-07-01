@@ -109,9 +109,52 @@ const CourseCard: React.FC<{
   onEdit: (course: TeacherCourse) => void;
   onDelete: (course: TeacherCourse) => void;
 }> = ({ course, onEdit, onDelete }) => {
-  const imageUrl = course.thumbnailUrl?.includes('i.pinimg.com') 
-    ? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=600&fit=crop'
-    : course.thumbnailUrl;
+  // Function to get proper thumbnail URL
+  const getThumbnailUrl = (course: TeacherCourse): string => {
+    // If course has YouTube video ID, use YouTube thumbnail
+    if (course.youtubeVideoId) {
+      return `https://img.youtube.com/vi/${course.youtubeVideoId}/maxresdefault.jpg`;
+    }
+    
+    // If course has custom YouTube thumbnail URL, use it
+    if (course.youtubeThumbnailUrl) {
+      return course.youtubeThumbnailUrl;
+    }
+    
+    // Handle Pinterest URLs (fallback to Unsplash)
+    if (course.thumbnailUrl?.includes('i.pinimg.com')) {
+      return 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=600&fit=crop';
+    }
+    
+    // Handle YouTube embed URLs (extract video ID and use thumbnail)
+    if (course.thumbnailUrl?.includes('youtube.com/embed/')) {
+      const videoIdMatch = course.thumbnailUrl.match(/youtube\.com\/embed\/([^?]+)/);
+      if (videoIdMatch && videoIdMatch[1]) {
+        return `https://img.youtube.com/vi/${videoIdMatch[1]}/maxresdefault.jpg`;
+      }
+    }
+    
+    // Handle YouTube watch URLs
+    if (course.thumbnailUrl?.includes('youtube.com/watch')) {
+      const videoIdMatch = course.thumbnailUrl.match(/[?&]v=([^&]+)/);
+      if (videoIdMatch && videoIdMatch[1]) {
+        return `https://img.youtube.com/vi/${videoIdMatch[1]}/maxresdefault.jpg`;
+      }
+    }
+    
+    // Handle youtu.be URLs
+    if (course.thumbnailUrl?.includes('youtu.be/')) {
+      const videoIdMatch = course.thumbnailUrl.match(/youtu\.be\/([^?]+)/);
+      if (videoIdMatch && videoIdMatch[1]) {
+        return `https://img.youtube.com/vi/${videoIdMatch[1]}/maxresdefault.jpg`;
+      }
+    }
+    
+    // Default fallback or original thumbnail URL
+    return course.thumbnailUrl || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=600&fit=crop';
+  };
+
+  const imageUrl = getThumbnailUrl(course);
 
   return (
     <div className="relative flex flex-col bg-white dark:bg-transparent border border-gray-200 dark:border-transparent rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 ease-in-out transform hover:-translate-y-1.5 overflow-hidden h-full">
@@ -531,19 +574,19 @@ export default function CourseManagementFinalOptimized() {
   // Form submission handlers
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createCourse(formData);
+    await createCourse();
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingCourse) {
-      await updateCourse(editingCourse.id, formData);
+      await updateCourse();
     }
   };
 
   const handleDeleteConfirm = async () => {
     if (deletingCourse) {
-      await deleteCourse(deletingCourse.id);
+      await deleteCourse();
     }
   };
 

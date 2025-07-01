@@ -7,7 +7,6 @@ const nextConfig: NextConfig = {
 
   images: {
     remotePatterns: [
-
       {
         protocol: 'https',
         hostname: 'ui-avatars.com', // <<< TAMBAHKAN DOMAIN INI
@@ -18,12 +17,33 @@ const nextConfig: NextConfig = {
         hostname: 'images.unsplash.com', // <<< ADDED FOR UNSPLASH IMAGES
         pathname: '/**', // Allow all paths under this hostname
       },
-      // Anda bisa menambahkan konfigurasi untuk domain lain di sini
-      // {
-      //   protocol: 'https',
-      //   hostname: 'example.com',
-      //   pathname: '/images/**',
-      // },
+      // YouTube domains untuk course thumbnails
+      {
+        protocol: 'https',
+        hostname: 'www.youtube.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'img.youtube.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.ytimg.com',
+        pathname: '/**',
+      },
+      // Additional image hosting domains
+      {
+        protocol: 'https',
+        hostname: 'example.com', // For mock uploaded thumbnails
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.pinimg.com', // Pinterest images (used in mock data)
+        pathname: '/**',
+      },
     ],
   },
 };

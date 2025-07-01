@@ -83,20 +83,16 @@ export default function CourseManagementOptimized() {
   // Form submission handlers
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createCourse(formData);
+    await createCourse();
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingCourse) {
-      await updateCourse(editingCourse.id, formData);
-    }
+    await updateCourse();
   };
 
   const handleDeleteConfirm = async () => {
-    if (deletingCourse) {
-      await deleteCourse(deletingCourse.id);
-    }
+    await deleteCourse();
   };
 
   return (
