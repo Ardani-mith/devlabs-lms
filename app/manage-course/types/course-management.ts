@@ -26,6 +26,16 @@ export interface TeacherCourse extends BaseContent {
   instructorId: string;
 }
 
+export interface LessonFormData {
+  id?: string;
+  title: string;
+  description: string;
+  youtubeUrl: string;
+  youtubeVideoId?: string;
+  duration?: number; // in minutes
+  order: number;
+}
+
 export interface CourseFormData {
   title: string;
   description: string;
@@ -40,6 +50,7 @@ export interface CourseFormData {
   price: number;
   published: boolean;
   tags: string[];
+  lessons: LessonFormData[];
   lessonsCount: number;
   totalDurationHours: number;
 }

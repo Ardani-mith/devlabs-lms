@@ -6,6 +6,7 @@ import {
   UserCircleIcon, // For instructor
   StarIcon,     // For rating
 } from "@heroicons/react/24/solid";
+import { getProperThumbnailUrl } from "@/lib/utils/youtube";
 
 export interface CourseDetails {
   id: string;
@@ -44,10 +45,7 @@ export function CourseDisplayCard({ course }: CourseDisplayCardProps) {
       <div className="relative flex flex-col bg-white dark:bg-transparent border border-gray-200 dark:border-transparent rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 ease-in-out transform hover:-translate-y-1.5 overflow-hidden h-full">
         <div className="relative w-full h-48 sm:h-52">
           <Image
-            src={course.thumbnailUrl?.includes('i.pinimg.com') 
-              ? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=600&fit=crop'
-              : course.thumbnailUrl || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=600&fit=crop"
-            } // Fallback image with Pinterest detection
+            src={getProperThumbnailUrl(course.thumbnailUrl)}
             alt={course.title}
             layout="fill"
             className="object-cover group-hover:scale-100 transition-transform duration-500 ease-in-out"
@@ -75,10 +73,10 @@ export function CourseDisplayCard({ course }: CourseDisplayCardProps) {
           <div className="flex items-center text-xs text-gray-600 dark:text-neutral-400 mb-3">
             {course.instructorAvatarUrl ? (
               <Image 
-                src={course.instructorAvatarUrl?.includes('i.pinimg.com') 
-                  ? 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face'
-                  : course.instructorAvatarUrl
-                } 
+                src={getProperThumbnailUrl(
+                  course.instructorAvatarUrl, 
+                  'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face'
+                )}
                 alt={course.instructorName} 
                 width={20} 
                 height={20} 

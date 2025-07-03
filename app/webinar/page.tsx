@@ -4,13 +4,11 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { CalendarDaysIcon, MagnifyingGlassIcon, AdjustmentsHorizontalIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { WebinarCard } from './components/WebinarCard';
-import { MagnifyingGlassIcon, FunnelIcon, XMarkIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
-import { Tv2 } from 'lucide-react';
 
-interface Speaker { name: string; title: string; avatarUrl?: string; }
-type WebinarStatus = "LIVE" | "UPCOMING" | "ENDED";
+// TypeScript Types
 interface Webinar {
   id: string;
   slug: string;
@@ -18,175 +16,241 @@ interface Webinar {
   tagline?: string;
   category: string;
   thumbnailUrl: string;
-  speakers: Speaker[];
+  speakers: Array<{ name: string; title: string }>;
   dateTime: string;
   durationMinutes: number;
-  status: WebinarStatus;
+  status: "UPCOMING" | "LIVE" | "ENDED";
   joinUrl?: string;
   replayUrl?: string;
-  materialsUrl?: { name: string; url: string }[];
-  tags?: string[];
+  materialsUrl?: Array<{ name: string; url: string }>;
+  tags: string[];
 }
 
-const allWebinarsData: Webinar[] = [
-  { id: "web001", slug: "mastering-nextjs-14", title: "Mastering Next.js 14: Dari Dasar hingga Aplikasi Skala Besar", tagline: "Pelajari fitur terbaru Next.js dan bangun aplikasi web modern yang super cepat.", category: "Teknologi", thumbnailUrl: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&h=600&fit=crop", speakers: [{ name: "Budi Santoso", title: "Lead Developer" }], dateTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), durationMinutes: 90, status: "UPCOMING", joinUrl: "#", tags: ["Next.js", "React", "TypeScript"] },
-  { id: "web002", slug: "digital-marketing-trends-2025", title: "Tren Digital Marketing 2025: Strategi Jitu untuk Bisnis Anda", tagline: "Kupas tuntas tren terbaru dan siapkan strategi marketing Anda untuk tahun depan.", category: "Bisnis", thumbnailUrl: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&h=600&fit=crop", speakers: [{ name: "Citra Dewi", title: "Marketing Expert" }], dateTime: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), durationMinutes: 60, status: "LIVE", joinUrl: "#", tags: ["Marketing", "SEO", "Social Media"] },
-  { id: "web003", slug: "ui-ux-design-fundamental", title: "Fundamental Desain UI/UX untuk Aplikasi Mobile", tagline: "Pahami prinsip dasar desain antarmuka dan pengalaman pengguna yang memukau.", category: "Desain", thumbnailUrl: "https://images.unsplash.com/photo-1561736778-92e52a7769ef?w=800&h=600&fit=crop", speakers: [{ name: "Alex Johnson", title: "Senior UI/UX Designer" }], dateTime: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), durationMinutes: 120, status: "ENDED", replayUrl: "#", materialsUrl: [{name: "Slide PDF", url: "#"}] , tags: ["UI Design", "UX Research", "Mobile Apps"]},
-  { id: "web004", slug: "investasi-saham-pemula", title: "Panduan Investasi Saham untuk Pemula", category: "Keuangan", thumbnailUrl: "https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?w=800&h=600&fit=crop", speakers: [{ name: "Rina Wijaya", title: "Financial Advisor" }], dateTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), durationMinutes: 75, status: "UPCOMING", joinUrl: "#", tags: ["Investasi", "Saham", "Pasar Modal"] },
-  { id: "web005", slug: "fotografi-produk-ecommerce", title: "Teknik Fotografi Produk untuk E-commerce yang Menjual", category: "Kreatif", thumbnailUrl: "https://images.unsplash.com/photo-1606857521015-7f9fcf423740?w=800&h=600&fit=crop", speakers: [{ name: "Andi Pratama", title: "Professional Photographer" }], dateTime: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), durationMinutes: 90, status: "ENDED", replayUrl: "#", tags: ["Fotografi", "E-commerce", "Produk"] },
-  { id: "web006", slug: "public-speaking-mastery", title: "Public Speaking Mastery: Berbicara PD di Depan Umum", category: "Pengembangan Diri", thumbnailUrl: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop", speakers: [{ name: "Sarah Lee", title: "Communication Coach" }], dateTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), durationMinutes: 60, status: "UPCOMING", joinUrl: "#", tags: ["Komunikasi", "Presentasi"] },
-];
+interface WebinarData {
+  webinars: Webinar[];
+  categories: string[];
+}
 
-const webinarCategoriesFilter = ["Semua Kategori", "Teknologi", "Bisnis", "Desain", "Keuangan", "Kreatif", "Pengembangan Diri"];
-const webinarDateFilters = ["Semua Waktu", "Minggu Ini", "Bulan Ini", "Akan Datang", "Sudah Lewat"];
+// API function to fetch webinar data
+const fetchWebinarData = async (): Promise<WebinarData> => {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/webinars`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
-
-export default function AllWebinarsPage() {
-  const searchParams = useSearchParams();
-  const activeCategoryParam = searchParams.get('category') || 'all';
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTopic, setSelectedTopic] = useState("Semua Kategori");
-  const [selectedDate, setSelectedDate] = useState("Semua Waktu");
-  const [showFilters, setShowFilters] = useState(false);
-
-  const filteredWebinars = useMemo(() => {
-    let webinars = allWebinarsData;
-
-    if (activeCategoryParam === 'upcoming') {
-      webinars = webinars.filter(w => w.status === 'UPCOMING' || w.status === 'LIVE');
-    } else if (activeCategoryParam === 'past') {
-      webinars = webinars.filter(w => w.status === 'ENDED');
+    if (response.ok) {
+      return await response.json();
+    } else {
+      // Return empty data if API fails
+      return {
+        webinars: [],
+        categories: ["Semua Kategori"]
+      };
     }
+  } catch (error) {
+    console.error('Webinar API error:', error);
+    return {
+      webinars: [],
+      categories: ["Semua Kategori"]
+    };
+  }
+};
 
-    if (searchTerm) {
-      const lowerSearchTerm = searchTerm.toLowerCase();
-      webinars = webinars.filter(webinar =>
-        webinar.title.toLowerCase().includes(lowerSearchTerm) ||
-        webinar.speakers.some(s => s.name.toLowerCase().includes(lowerSearchTerm)) ||
-        (webinar.tags && webinar.tags.some(tag => tag.toLowerCase().includes(lowerSearchTerm)))
-      );
-    }
+export default function WebinarPage() {
+  const { user } = useAuth();
+  const [webinarData, setWebinarData] = useState<WebinarData>({
+    webinars: [],
+    categories: ["Semua Kategori"]
+  });
+  const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState("Semua Kategori");
+  const [selectedDateFilter, setSelectedDateFilter] = useState("Semua Waktu");
+  const [searchQuery, setSearchQuery] = useState("");
 
-    if (selectedTopic !== "Semua Kategori") {
-      webinars = webinars.filter(webinar => webinar.category === selectedTopic);
-    }
-    
-    const now = new Date();
-    if (selectedDate === "Minggu Ini") {
-        const currentDay = now.getDay(); 
-        const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay;
-        const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday);
-        startOfWeek.setHours(0, 0, 0, 0);
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 6);
-        endOfWeek.setHours(23, 59, 59, 999);
-        webinars = webinars.filter(w => new Date(w.dateTime) >= startOfWeek && new Date(w.dateTime) <= endOfWeek);
-    } else if (selectedDate === "Bulan Ini") {
-        webinars = webinars.filter(w => new Date(w.dateTime).getMonth() === now.getMonth() && new Date(w.dateTime).getFullYear() === now.getFullYear());
-    } else if (selectedDate === "Akan Datang") {
-        webinars = webinars.filter(w => new Date(w.dateTime) > now && (w.status === "UPCOMING" || w.status === "LIVE"));
-    } else if (selectedDate === "Sudah Lewat") {
-        webinars = webinars.filter(w => new Date(w.dateTime) < now && w.status === "ENDED");
-    }
-
-    return webinars;
-  }, [activeCategoryParam, searchTerm, selectedTopic, selectedDate]);
-  
   useEffect(() => {
-    const hash = window.location.hash;
-    if (hash) {
-      const element = document.querySelector(hash);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
+    const loadWebinarData = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchWebinarData();
+        setWebinarData(data);
+      } catch (error) {
+        console.error('Error loading webinar data:', error);
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+
+    loadWebinarData();
   }, []);
 
+  const { webinars } = webinarData;
+  const webinarCategories = ["Semua Kategori", ...webinarData.categories];
+  const webinarDateFilters = ["Semua Waktu", "Minggu Ini", "Bulan Ini", "Akan Datang", "Sudah Lewat"];
+
+  // Filter webinars based on search, category, and date
+  const filteredWebinars = useMemo(() => {
+    return webinars.filter(webinar => {
+      // Search filter
+      const matchesSearch = webinar.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           webinar.speakers.some(speaker => speaker.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                           webinar.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      // Category filter
+      const matchesCategory = selectedCategory === "Semua Kategori" || webinar.category === selectedCategory;
+
+      // Date filter
+      const now = new Date();
+      const webinarDate = new Date(webinar.dateTime);
+      let matchesDate = true;
+
+      if (selectedDateFilter === "Minggu Ini") {
+        const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+        const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+        matchesDate = webinarDate >= weekStart && webinarDate < weekEnd;
+      } else if (selectedDateFilter === "Bulan Ini") {
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        matchesDate = webinarDate >= monthStart && webinarDate < monthEnd;
+      } else if (selectedDateFilter === "Akan Datang") {
+        matchesDate = webinarDate > now;
+      } else if (selectedDateFilter === "Sudah Lewat") {
+        matchesDate = webinarDate < now;
+      }
+
+      return matchesSearch && matchesCategory && matchesDate;
+    });
+  }, [webinars, searchQuery, selectedCategory, selectedDateFilter]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background-light dark:bg-background-dark text-text-light-primary dark:text-text-dark-primary">
+        <div className="container mx-auto px-4 lg:px-8 py-8 lg:py-12 animate-pulse">
+          <div className="h-8 bg-gray-200 dark:bg-neutral-700 rounded w-1/3 mb-6"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-80 bg-gray-200 dark:bg-neutral-700 rounded-2xl"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-10">
-      <div className="bg-white dark:bg-neutral-800/80 p-5 sm:p-6 rounded-2xl shadow-xl border border-gray-200 dark:border-neutral-700/70">
-        <div className="flex flex-col md:flex-row gap-4 items-center mb-4">
-          <div className="relative flex-grow w-full">
-            <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-neutral-500 pointer-events-none" />
+    <div className="min-h-screen bg-background-light dark:bg-background-dark text-text-light-primary dark:text-text-dark-primary">
+      <div className="container mx-auto px-4 lg:px-8 py-8 lg:py-12 space-y-10">
+        
+        {/* Header */}
+        <div className="text-center lg:text-left">
+          <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            Webinar & Online Events
+          </h1>
+          <p className="text-gray-600 dark:text-neutral-400 text-lg max-w-2xl mx-auto lg:mx-0">
+            Bergabunglah dengan webinar eksklusif dan perluas pengetahuan Anda bersama para ahli di berbagai bidang.
+          </p>
+        </div>
+
+        {/* Search and Filters */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Search Bar */}
+          <div className="relative flex-1">
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-neutral-500" />
             <input
               type="search"
               placeholder="Cari webinar, pembicara, atau topik..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3.5 rounded-xl border-2 border-gray-300 dark:border-neutral-600/80 bg-white dark:bg-neutral-700/60 text-sm focus:ring-2 focus:ring-brand-purple dark:focus:ring-purple-500 focus:border-transparent transition-shadow focus:shadow-lg"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-neutral-400 focus:ring-2 focus:ring-brand-purple focus:border-transparent"
             />
           </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="w-full md:w-auto flex items-center justify-center px-5 py-3.5 rounded-xl border-2 border-gray-300 dark:border-neutral-600/80 bg-white dark:bg-neutral-700/60 text-sm font-semibold text-gray-700 dark:text-neutral-200 hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors focus:ring-2 focus:ring-brand-purple dark:focus:ring-purple-500"
-          >
-            <FunnelIcon className="h-5 w-5" />
-            
-          </button>
+
+          {/* Category Filter */}
+          <div className="relative min-w-[200px]">
+            <AdjustmentsHorizontalIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-neutral-500" />
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full appearance-none pl-10 pr-8 py-3 rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-purple focus:border-transparent"
+            >
+              {webinarCategories.map((category) => (
+                <option key={category} value={category}>{category}</option>
+              ))}
+            </select>
+            <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-neutral-500 pointer-events-none" />
+          </div>
+
+          {/* Date Filter */}
+          <div className="relative min-w-[160px]">
+            <CalendarDaysIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-neutral-500" />
+            <select
+              value={selectedDateFilter}
+              onChange={(e) => setSelectedDateFilter(e.target.value)}
+              className="w-full appearance-none pl-10 pr-8 py-3 rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-purple focus:border-transparent"
+            >
+              {webinarDateFilters.map((filter) => (
+                <option key={filter} value={filter}>{filter}</option>
+              ))}
+            </select>
+            <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-neutral-500 pointer-events-none" />
+          </div>
         </div>
-        {showFilters && (
-          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-neutral-700/60 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 animate-fadeIn">
-            <div>
-              <label htmlFor="topic-filter" className="block text-xs font-medium text-gray-700 dark:text-neutral-300 mb-1">Kategori Topik</label>
-              <div className="relative">
-                <select id="topic-filter" value={selectedTopic} onChange={(e) => setSelectedTopic(e.target.value)} className="w-full appearance-none pl-3 pr-8 py-2.5 rounded-md border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-sm focus:ring-1 focus:ring-brand-purple dark:focus:ring-purple-500 focus:border-transparent">
-                  {webinarCategoriesFilter.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                </select>
-                <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-neutral-500 pointer-events-none" />
-              </div>
-            </div>
-            <div>
-              <label htmlFor="date-filter" className="block text-xs font-medium text-gray-700 dark:text-neutral-300 mb-1">Filter Waktu</label>
-              <div className="relative">
-                <select id="date-filter" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full appearance-none pl-3 pr-8 py-2.5 rounded-md border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-sm focus:ring-1 focus:ring-brand-purple dark:focus:ring-purple-500 focus:border-transparent">
-                  {webinarDateFilters.map(dateOpt => <option key={dateOpt} value={dateOpt}>{dateOpt}</option>)}
-                </select>
-                <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-neutral-500 pointer-events-none" />
-              </div>
-            </div>
-            <div className="sm:col-span-2 md:col-span-1 flex items-end">
-                <button
-                    onClick={() => { setSearchTerm(""); setSelectedTopic("Semua Kategori"); setSelectedDate("Semua Waktu"); setShowFilters(false); }}
-                    className="w-full flex items-center justify-center text-xs text-gray-600 dark:text-neutral-400 hover:text-brand-purple dark:hover:text-purple-400 font-medium py-2.5 px-3 rounded-md hover:bg-gray-100 dark:hover:bg-neutral-700/50 border border-gray-300 dark:border-neutral-600"
-                >
-                    <XMarkIcon className="h-4 w-4 mr-1" /> Reset Filter
-                </button>
+
+        {/* Results Summary */}
+        <div className="flex items-center justify-between">
+          <p className="text-gray-600 dark:text-neutral-400">
+            Menampilkan {filteredWebinars.length} webinar
+            {selectedCategory !== "Semua Kategori" && ` dalam kategori "${selectedCategory}"`}
+            {searchQuery && ` yang cocok dengan "${searchQuery}"`}
+          </p>
+        </div>
+
+        {/* Webinar Grid */}
+        {filteredWebinars.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {filteredWebinars.map((webinar) => (
+              <WebinarCard key={webinar.id} webinar={webinar} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-16">
+            <div className="max-w-md mx-auto">
+              <CalendarDaysIcon className="h-16 w-16 text-gray-300 dark:text-neutral-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                Tidak ada webinar ditemukan
+              </h3>
+              <p className="text-gray-600 dark:text-neutral-400 mb-6">
+                Coba ubah filter atau kata kunci pencarian Anda.
+              </p>
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedCategory("Semua Kategori");
+                  setSelectedDateFilter("Semua Waktu");
+                }}
+                className="bg-brand-purple hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              >
+                Reset Filter
+              </button>
             </div>
           </div>
         )}
-      </div>
 
-      {filteredWebinars.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 xl:gap-10">
-          {filteredWebinars.map((webinar) => (
-            <WebinarCard key={webinar.id} webinar={webinar} />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-16 col-span-full bg-white dark:bg-neutral-800/80 rounded-xl shadow-lg border border-gray-200 dark:border-neutral-700/70">
-          <Tv2 className="mx-auto h-20 w-20 text-gray-300 dark:text-neutral-700 mb-4" strokeWidth={1.5}/>
-          <h3 className="mt-2 text-2xl font-semibold text-gray-900 dark:text-neutral-200">Oops! Webinar Tidak Ditemukan</h3>
-          <p className="mt-2 text-base text-gray-500 dark:text-neutral-400 max-w-md mx-auto">
-            Kami tidak dapat menemukan webinar yang cocok dengan pencarian atau filter Anda. Coba kata kunci atau filter lain.
-          </p>
-           <button
-                onClick={() => { setSearchTerm(""); setSelectedTopic("Semua Kategori"); setSelectedDate("Semua Waktu"); }}
-                className="mt-8 px-6 py-2.5 border border-transparent text-sm font-semibold rounded-lg text-white bg-brand-purple hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:focus:ring-offset-neutral-900"
-            >
-                Lihat Semua Webinar
-            </button>
-        </div>
-      )}
-
-      {filteredWebinars.length > 6 && (
-          <div className="mt-16 flex justify-center">
-            <button className="px-8 py-3 border border-gray-300 dark:border-neutral-600 text-sm font-semibold rounded-lg text-gray-700 dark:text-neutral-200 bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700/70 transition-colors">
-                Muat Lebih Banyak Webinar
+        {/* Call to Action for Teachers/Admins */}
+        {user && (user.role === 'TEACHER' || user.role === 'ADMIN') && (
+          <div className="bg-gradient-to-r from-brand-purple to-purple-700 p-8 rounded-2xl text-white text-center">
+            <h3 className="text-2xl font-bold mb-4">Ingin mengadakan webinar?</h3>
+            <p className="text-white/90 mb-6 max-w-2xl mx-auto">
+              Berbagi pengetahuan Anda dengan komunitas pembelajar melalui webinar interaktif.
+            </p>
+            <button className="bg-white text-brand-purple hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors">
+              Ajukan Webinar
             </button>
           </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

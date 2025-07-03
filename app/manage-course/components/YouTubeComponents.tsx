@@ -230,17 +230,18 @@ export const YouTubeUrlInput: React.FC<YouTubeUrlInputProps> = ({
     if (videoId) {
       onChange(newUrl, videoId);
       
-      // Simulate fetching video info (in real app, use YouTube API)
+      // In a real application, you would fetch video info from YouTube API here
       if (onVideoInfo) {
-        const mockVideoInfo: YouTube = {
+        // For now, we'll create a basic video info object with the thumbnail
+        const basicVideoInfo: YouTube = {
           videoId,
-          title: 'Sample YouTube Video',
-          description: 'Video description would be fetched from YouTube API',
+          title: 'YouTube Video',
+          description: 'YouTube video content',
           thumbnailUrl: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-          duration: '10:30',
+          duration: 'Unknown',
           publishedAt: new Date().toISOString()
         };
-        onVideoInfo(mockVideoInfo);
+        onVideoInfo(basicVideoInfo);
       }
     } else {
       onChange(newUrl, '');

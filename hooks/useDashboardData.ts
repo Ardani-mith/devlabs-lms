@@ -92,70 +92,40 @@ const ROLE_QUICK_ACCESS: Record<string, QuickAccessLink[]> = {
   ],
 };
 
-// Mock data - in real app this would come from API
-const mockDashboardData = {
-  activities: [
-    { id: 1, title: "Anda menyelesaikan kuis 'Introduction to AI'", description: "2 jam lalu", contentType: 'activity' as const, icon: CheckCircleIcon },
-    { id: 2, title: "Materi baru ditambahkan ke kursus 'Web Development Bootcamp'", description: "5 jam lalu", contentType: 'activity' as const, icon: LightBulbIcon },
-    { id: 3, title: "Anda bergabung ke forum diskusi 'Project Collaboration'", description: "1 hari lalu", contentType: 'activity' as const, icon: ChatBubbleLeftRightIcon },
-    { id: 4, title: "Pengumuman baru: Jadwal Ujian Akhir Semester", description: "2 hari lalu", contentType: 'activity' as const, icon: BellIcon },
-  ],
-  newLaunches: [
-    { 
-      id: 1, 
-      title: "Advanced React Patterns", 
-      description: "Kursus oleh Dr. Eva Green", 
-      image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&h=600&fit=crop", 
-      href: "/courses/advanced-react-patterns",
-      contentType: 'course' as const,
-      new: true
-    },
-    { 
-      id: 2, 
-      title: "Data Science with Python: Module 3", 
-      description: "Modul baru tersedia", 
-      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop", 
-      href: "/courses/data-science-python",
-      contentType: 'course' as const,
-      new: true
-    },
-  ],
-  completedCourses: [
-    { id: 1, title: "JavaScript Fundamentals", description: "Selesai: 15 Mei 2025", contentType: 'course' as const, certificateLink: "#" },
-    { id: 2, title: "Introduction to UI/UX Design", description: "Selesai: 20 Apr 2025", contentType: 'course' as const, certificateLink: "#" },
-    { id: 3, title: "Basic HTML & CSS", description: "Selesai: 10 Mar 2025", contentType: 'course' as const, certificateLink: "#" },
-  ],
-  deadlines: [
-    { id: 1, title: "Submit Esai Sejarah Modern", description: "Sejarah Dunia", dueDate: "3 hari lagi", contentType: 'deadline' as const, urgency: 'high' as const },
-    { id: 2, title: "Ujian Tengah Semester Kalkulus", description: "Kalkulus I", dueDate: "5 hari lagi", contentType: 'deadline' as const, urgency: 'medium' as const },
-    { id: 3, title: "Webinar: Future of Web Development", description: "Event mendatang", dueDate: "1 minggu lagi", contentType: 'deadline' as const, urgency: 'low' as const },
-  ],
-  news: [
-    { 
-      id: 1, 
-      title: "Beasiswa Pendidikan 2025 Telah Dibuka!", 
-      description: "26 Mei 2025", 
-      category: "Beasiswa", 
-      image: "https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?w=800&h=600&fit=crop",
-      href: "/news/beasiswa-2025",
-      contentType: 'news' as const,
-      new: true
-    },
-    { 
-      id: 2, 
-      title: "Tips Efektif Belajar Online dari Rumah", 
-      description: "25 Mei 2025", 
-      category: "Tips Belajar", 
-      image: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&h=600&fit=crop",
-      href: "/news/tips-belajar-online",
-      contentType: 'news' as const,
-      new: false
-    },
-  ],
-  notifications: [
-    { id: 1, title: "Tugas 'Analisis Data' akan berakhir dalam 24 jam.", description: "deadline", contentType: 'notification' as const, urgency: 'high' as const },
-    { id: 2, title: "Dosen memberikan feedback pada tugas 'Esai Sastra'.", description: "feedback", contentType: 'notification' as const, urgency: 'low' as const },
-  ]
+// API function to fetch dashboard data
+const fetchDashboardDataFromAPI = async (userId: string, userRole: string) => {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/dashboard/${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.ok) {
+      return await response.json();
+    } else {
+      // Return empty data structure if API fails
+      return {
+        activities: [],
+        newLaunches: [],
+        completedCourses: [],
+        deadlines: [],
+        news: [],
+        notifications: []
+      };
+    }
+  } catch (error) {
+    console.error('Dashboard API error:', error);
+    return {
+      activities: [],
+      newLaunches: [],
+      completedCourses: [],
+      deadlines: [],
+      news: [],
+      notifications: []
+    };
+  }
 };
 
 export const useDashboardData = () => {
@@ -195,22 +165,44 @@ export const useDashboardData = () => {
       try {
         setIsLoading(true);
         
-        // In real app, this would be API calls
-        // const response = await api.getDashboardData(user.id, user.role);
-        
-        // Mock API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Fetch real dashboard data from API
+        const apiData = await fetchDashboardDataFromAPI(user.id?.toString() || '', user.role || 'USER');
         
         const userData: UserDashboardData = {
           statistics,
           progress,
           quickAccessLinks,
-          activities: mockDashboardData.activities.map(item => ({ ...item, id: item.id.toString() })) as DashboardContent[],
-          news: mockDashboardData.news.map(item => ({ ...item, id: item.id.toString() })) as DashboardContent[],
-          deadlines: mockDashboardData.deadlines.map(item => ({ ...item, id: item.id.toString() })) as DashboardContent[],
-          completedCourses: mockDashboardData.completedCourses.map(item => ({ ...item, id: item.id.toString() })) as DashboardContent[],
-          notifications: mockDashboardData.notifications.map(item => ({ ...item, id: item.id.toString() })) as DashboardContent[],
-          newLaunches: mockDashboardData.newLaunches.map(item => ({ ...item, id: item.id.toString() })) as DashboardContent[],
+          activities: (apiData.activities || []).map((item: any) => ({ 
+            ...item, 
+            id: item.id?.toString() || Math.random().toString(),
+            contentType: 'activity' as const,
+            icon: CheckCircleIcon
+          })) as DashboardContent[],
+          news: (apiData.news || []).map((item: any) => ({ 
+            ...item, 
+            id: item.id?.toString() || Math.random().toString(),
+            contentType: 'news' as const
+          })) as DashboardContent[],
+          deadlines: (apiData.deadlines || []).map((item: any) => ({ 
+            ...item, 
+            id: item.id?.toString() || Math.random().toString(),
+            contentType: 'deadline' as const
+          })) as DashboardContent[],
+          completedCourses: (apiData.completedCourses || []).map((item: any) => ({ 
+            ...item, 
+            id: item.id?.toString() || Math.random().toString(),
+            contentType: 'course' as const
+          })) as DashboardContent[],
+          notifications: (apiData.notifications || []).map((item: any) => ({ 
+            ...item, 
+            id: item.id?.toString() || Math.random().toString(),
+            contentType: 'notification' as const
+          })) as DashboardContent[],
+          newLaunches: (apiData.newLaunches || []).map((item: any) => ({ 
+            ...item, 
+            id: item.id?.toString() || Math.random().toString(),
+            contentType: 'course' as const
+          })) as DashboardContent[],
         };
 
         setDashboardData(userData);

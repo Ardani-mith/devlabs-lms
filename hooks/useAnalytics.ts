@@ -20,13 +20,13 @@ import {
   ChartDataPoint
 } from '../app/analytics/types/analytics';
 
-// Mock analytics data
-const mockAnalyticsData: AnalyticsData = {
+// Create default analytics data structure with icons
+const createDefaultAnalyticsData = (): AnalyticsData => ({
   kpis: [
     {
       title: "Total Students",
-      value: "1,879",
-      change: "+12.5%",
+      value: "0",
+      change: "0%",
       changeType: "positive",
       icon: UsersIcon,
       color: "text-blue-500 dark:text-blue-400",
@@ -34,8 +34,8 @@ const mockAnalyticsData: AnalyticsData = {
     },
     {
       title: "Active Courses",
-      value: "124",
-      change: "+5",
+      value: "0",
+      change: "0",
       changeType: "positive",
       icon: BookOpenIcon,
       color: "text-green-500 dark:text-green-400",
@@ -43,8 +43,8 @@ const mockAnalyticsData: AnalyticsData = {
     },
     {
       title: "Total Revenue",
-      value: "$48,620",
-      change: "+8.2%",
+      value: "$0",
+      change: "0%",
       changeType: "positive",
       icon: CurrencyDollarIcon,
       color: "text-indigo-500 dark:text-indigo-400",
@@ -52,47 +52,26 @@ const mockAnalyticsData: AnalyticsData = {
     },
     {
       title: "Avg. Completion Rate",
-      value: "76%",
-      change: "-1.8%",
-      changeType: "negative",
+      value: "0%",
+      change: "0%",
+      changeType: "positive",
       icon: AcademicCapIcon,
-      color: "text-red-500 dark:text-red-400",
-      bgColor: "bg-red-50 dark:bg-red-900/30",
+      color: "text-yellow-500 dark:text-yellow-400",
+      bgColor: "bg-yellow-50 dark:bg-yellow-900/30",
     },
   ],
-  popularCourses: [
-    { id: 1, name: "Advanced JavaScript & React Mastery", students: 302, revenue: "$8,990", rating: 4.8 },
-    { id: 2, name: "Python for Data Science Bootcamp", students: 258, revenue: "$7,500", rating: 4.7 },
-    { id: 3, name: "UX Design Fundamentals: From Zero to Hero", students: 210, revenue: "$6,100", rating: 4.9 },
-    { id: 4, name: "Digital Marketing Strategy for Growth", students: 180, revenue: "$5,500", rating: 4.6 },
-    { id: 5, name: "The Complete Shopify Dropshipping Course", students: 155, revenue: "$4,200", rating: 4.5 },
-  ],
-  demographics: [
-    { region: "Asia", percentage: 40, color: "bg-blue-500" },
-    { region: "Europe", percentage: 30, color: "bg-green-500" },
-    { region: "Americas", percentage: 20, color: "bg-indigo-500" },
-    { region: "Others", percentage: 10, color: "bg-red-500" },
-  ],
+  popularCourses: [],
+  demographics: [],
   teacherPerformance: {
-    avgRating: 4.7,
-    coursesTaught: 12,
-    totalStudents: 350,
+    avgRating: 0,
+    coursesTaught: 0,
+    totalStudents: 0,
   },
   charts: {
-    enrollmentTrend: [
-      { label: "Jan", value: 120, date: "2024-01" },
-      { label: "Feb", value: 150, date: "2024-02" },
-      { label: "Mar", value: 180, date: "2024-03" },
-      { label: "Apr", value: 200, date: "2024-04" },
-    ],
-    revenueGrowth: [
-      { label: "Q1", value: 15000, date: "2024-Q1" },
-      { label: "Q2", value: 20000, date: "2024-Q2" },
-      { label: "Q3", value: 25000, date: "2024-Q3" },
-      { label: "Q4", value: 30000, date: "2024-Q4" },
-    ],
+    enrollmentTrend: [],
+    revenueGrowth: [],
   },
-};
+});
 
 export const useAnalytics = () => {
   const [state, setState] = useState<AnalyticsState>({
@@ -104,28 +83,48 @@ export const useAnalytics = () => {
     isExporting: false,
   });
 
-  // Simulate data fetching
-  const fetchAnalyticsData = useCallback(async (_period: string, _teacher: string) => {
+  // Fetch real analytics data from API
+  const fetchAnalyticsData = useCallback(async (period: string, teacher: string) => {
     setState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Make real API call to get analytics data
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/analytics?period=${period}&teacher=${teacher}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
       
-      // In real app, this would be an actual API call
-      // const response = await fetch(`/api/analytics?period=${period}&teacher=${teacher}`);
-      // const data = await response.json();
-      
+      if (response.ok) {
+        const apiData = await response.json();
+        
+        // Transform API data to match AnalyticsData structure
+        const transformedData: AnalyticsData = {
+          ...createDefaultAnalyticsData(),
+          ...apiData,
+        };
+        
+        setState(prev => ({
+          ...prev,
+          data: transformedData,
+          loading: false,
+        }));
+      } else {
+        // If API fails, use default data
+        setState(prev => ({
+          ...prev,
+          data: createDefaultAnalyticsData(),
+          loading: false,
+        }));
+      }
+    } catch (err) {
+      console.error('Analytics API error:', err);
       setState(prev => ({
         ...prev,
-        data: mockAnalyticsData,
+        data: createDefaultAnalyticsData(),
         loading: false,
-      }));
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch analytics data',
+        error: 'Failed to fetch analytics data',
       }));
     }
   }, []);
@@ -147,21 +146,41 @@ export const useAnalytics = () => {
     setState(prev => ({ ...prev, isExporting: true }));
     
     try {
-      // Simulate export process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Make API call to export analytics report
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/analytics/export`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          period: state.selectedPeriod,
+          teacher: state.selectedTeacher,
+        }),
+      });
       
-      // In real app, this would trigger download
-      console.log('Exporting analytics report...');
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'analytics-report.pdf';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
       
       setState(prev => ({ ...prev, isExporting: false }));
-    } catch (error) {
+    } catch (err) {
+      console.error('Export error:', err);
       setState(prev => ({
         ...prev,
         isExporting: false,
         error: 'Failed to export report',
       }));
     }
-  }, []);
+  }, [state.selectedPeriod, state.selectedTeacher]);
 
   // Computed values
   const computedData = useMemo(() => {

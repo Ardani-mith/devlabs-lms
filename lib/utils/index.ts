@@ -223,4 +223,7 @@ export const storage = {
       return false;
     }
   },
-}; 
+};
+
+// Export YouTube utilities
+export * from './youtube'; 

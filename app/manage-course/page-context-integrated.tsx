@@ -5,13 +5,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import {
   PlusIcon, PencilIcon, TrashIcon, EyeIcon, UsersIcon, BookOpenIcon,
-  ClockIcon, StarIcon, ChartBarIcon, XMarkIcon, CheckIcon, ExclamationTriangleIcon,
-  AcademicCapIcon, PlayIcon
+  ClockIcon, StarIcon, ChartBarIcon, XMarkIcon, CheckIcon, ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCourseContext, Course, CourseFormData } from '@/contexts/CourseContext';
 import { getProperThumbnailUrl } from '@/lib/utils/youtube';
-import LessonManager from './components/LessonManager';
 
 // Types
 interface CourseStats {
@@ -29,7 +27,7 @@ interface NotificationData {
 }
 
 // Main Component
-export default function ManageCoursePage() {
+export default function CourseManagementContextIntegrated() {
   const { user } = useAuth();
   const { loading, createCourse, updateCourse, deleteCourse, getCoursesByInstructor } = useCourseContext();
 
@@ -37,7 +35,6 @@ export default function ManageCoursePage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [deletingCourse, setDeletingCourse] = useState<Course | null>(null);
-  const [selectedCourseForLessons, setSelectedCourseForLessons] = useState<Course | null>(null);
   const [notification, setNotification] = useState<NotificationData | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState<CourseFormData>({
@@ -73,7 +70,7 @@ export default function ManageCoursePage() {
   const courses = useMemo(() => {
     if (!user?.id) return [];
     return getCoursesByInstructor(user.id.toString());
-  }, [getCoursesByInstructor, user?.id]);
+  }, [getCoursesByInstructor, user?.id]); // Removed allCourses dependency
 
   // Calculate stats
   const stats: CourseStats = useMemo(() => ({
@@ -90,7 +87,7 @@ export default function ManageCoursePage() {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Access Denied</h2>
-        <p className="text-gray-600 dark:text-gray-400 mt-2">Only teachers and admins can access this page.</p>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">Only teachers can access this page.</p>
       </div>
     );
   }
@@ -103,15 +100,15 @@ export default function ManageCoursePage() {
     try {
       const result = await createCourse(formData);
       if (result) {
-        showNotification('success', 'Course created successfully! It will appear on the courses page.');
+        showNotification('success', 'Kursus berhasil dibuat dan akan muncul di halaman courses!');
         setShowCreateForm(false);
         resetForm();
       } else {
-        showNotification('error', 'Failed to create course');
+        showNotification('error', 'Gagal membuat kursus');
       }
     } catch (error) {
       console.error('Error creating course:', error);
-      showNotification('error', 'An error occurred while creating the course');
+      showNotification('error', 'Terjadi kesalahan saat membuat kursus');
     } finally {
       setSubmitting(false);
     }
@@ -126,15 +123,15 @@ export default function ManageCoursePage() {
     try {
       const result = await updateCourse(editingCourse.id, formData);
       if (result) {
-        showNotification('success', 'Course updated successfully! Changes will be visible on the courses page.');
+        showNotification('success', 'Kursus berhasil diperbarui dan perubahan akan terlihat di halaman courses!');
         setEditingCourse(null);
         resetForm();
       } else {
-        showNotification('error', 'Failed to update course');
+        showNotification('error', 'Gagal memperbarui kursus');
       }
     } catch (error) {
       console.error('Error updating course:', error);
-      showNotification('error', 'An error occurred while updating the course');
+      showNotification('error', 'Terjadi kesalahan saat memperbarui kursus');
     } finally {
       setSubmitting(false);
     }
@@ -146,14 +143,14 @@ export default function ManageCoursePage() {
     try {
       const success = await deleteCourse(deletingCourse.id);
       if (success) {
-        showNotification('success', 'Course deleted successfully from database!');
+        showNotification('success', 'Kursus berhasil dihapus dari database!');
         setDeletingCourse(null);
       } else {
-        showNotification('error', 'Failed to delete course');
+        showNotification('error', 'Gagal menghapus kursus');
       }
     } catch (error) {
       console.error('Error deleting course:', error);
-      showNotification('error', 'An error occurred while deleting the course');
+      showNotification('error', 'Terjadi kesalahan saat menghapus kursus');
     }
   };
 
@@ -248,40 +245,6 @@ export default function ManageCoursePage() {
     );
   }
 
-  // If a course is selected for lesson management, show the lesson manager
-  if (selectedCourseForLessons) {
-    return (
-      <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-        {/* Back Button */}
-        <div className="flex items-center gap-4 mb-6">
-          <button
-            onClick={() => setSelectedCourseForLessons(null)}
-            className="flex items-center px-4 py-2 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-neutral-600 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
-          >
-            ← Back to Courses
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Manage Lessons: {selectedCourseForLessons.title}
-            </h1>
-            <p className="text-sm text-gray-600 dark:text-neutral-400">
-              Add and manage YouTube video lessons for this course
-            </p>
-          </div>
-        </div>
-
-        {/* Lesson Manager */}
-        <LessonManager 
-          courseId={selectedCourseForLessons.id}
-          onLessonsChange={(lessons) => {
-            // Update course metadata when lessons change
-            console.log(`Course ${selectedCourseForLessons.id} now has ${lessons.length} lessons`);
-          }}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-10 p-4 sm:p-6 lg:p-8">
       {/* Notification */}
@@ -309,10 +272,10 @@ export default function ManageCoursePage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-neutral-100 sm:text-5xl">
-              Manage Your Courses
+              Kelola Kursus Anda
             </h1>
             <p className="mt-3 text-base text-gray-600 dark:text-neutral-400 max-w-3xl">
-              Create and manage courses with YouTube lessons. Changes will automatically sync with the courses page.
+              Buat dan kelola kursus yang akan otomatis tersinkronisasi dengan halaman courses secara realtime.
             </p>
           </div>
           <button
@@ -320,7 +283,7 @@ export default function ManageCoursePage() {
             className="flex items-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-md text-white bg-brand-purple hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors"
           >
             <PlusIcon className="h-5 w-5 mr-2" />
-            Create New Course
+            Buat Kursus Baru
           </button>
         </div>
       </header>
@@ -330,7 +293,7 @@ export default function ManageCoursePage() {
         <div className="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-neutral-400 mb-1">Total Courses</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-neutral-400 mb-1">Total Kursus</p>
               <p className="text-3xl font-bold text-gray-900 dark:text-neutral-100">{stats.totalCourses}</p>
             </div>
             <div className="bg-blue-50 dark:bg-blue-700/30 p-3 rounded-lg">
@@ -341,7 +304,7 @@ export default function ManageCoursePage() {
         <div className="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-neutral-400 mb-1">Total Students</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-neutral-400 mb-1">Total Siswa</p>
               <p className="text-3xl font-bold text-gray-900 dark:text-neutral-100">{stats.totalStudents}</p>
             </div>
             <div className="bg-green-50 dark:bg-green-700/30 p-3 rounded-lg">
@@ -352,7 +315,7 @@ export default function ManageCoursePage() {
         <div className="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-neutral-400 mb-1">Average Rating</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-neutral-400 mb-1">Rata-rata Rating</p>
               <p className="text-3xl font-bold text-gray-900 dark:text-neutral-100">
                 {stats.averageRating.toFixed(1)}
               </p>
@@ -365,7 +328,7 @@ export default function ManageCoursePage() {
         <div className="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-neutral-400 mb-1">Published Courses</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-neutral-400 mb-1">Kursus Terpublikasi</p>
               <p className="text-3xl font-bold text-gray-900 dark:text-neutral-100">{stats.publishedCourses}</p>
             </div>
             <div className="bg-purple-50 dark:bg-purple-700/30 p-3 rounded-lg">
@@ -379,15 +342,15 @@ export default function ManageCoursePage() {
       {courses.length === 0 ? (
         <div className="text-center py-16">
           <BookOpenIcon className="mx-auto h-20 w-20 text-gray-300 dark:text-neutral-700" />
-          <h3 className="mt-4 text-2xl font-semibold text-gray-900 dark:text-neutral-200">No Courses Yet</h3>
+          <h3 className="mt-4 text-2xl font-semibold text-gray-900 dark:text-neutral-200">Belum Ada Kursus</h3>
           <p className="mt-2 text-base text-gray-500 dark:text-neutral-400">
-            Start by creating your first course with YouTube lessons.
+            Mulai dengan membuat kursus pertama yang akan langsung muncul di halaman courses.
           </p>
           <button
             onClick={openCreateForm}
             className="mt-6 px-5 py-2.5 border border-transparent text-sm font-medium rounded-md text-white bg-brand-purple hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
           >
-            Create First Course
+            Buat Kursus Baru
           </button>
         </div>
       ) : (
@@ -403,7 +366,7 @@ export default function ManageCoursePage() {
                 />
                 {course.isNew && (
                   <span className="absolute top-3 right-3 bg-red-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full shadow-md animate-pulse">
-                    NEW
+                    BARU
                   </span>
                 )}
                 {!course.published && (
@@ -428,7 +391,7 @@ export default function ManageCoursePage() {
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-gray-700 dark:text-neutral-300 my-3">
                   <div className="flex items-center">
                     <UsersIcon className="h-4 w-4 mr-1.5 text-green-500 dark:text-green-400" />
-                    <span>{course.studentsEnrolled} Students</span>
+                    <span>{course.studentsEnrolled} Siswa</span>
                   </div>
                   <div className="flex items-center">
                     <BookOpenIcon className="h-4 w-4 mr-1.5 text-blue-500 dark:text-blue-400" />
@@ -436,7 +399,7 @@ export default function ManageCoursePage() {
                   </div>
                   <div className="flex items-center">
                     <ClockIcon className="h-4 w-4 mr-1.5 text-orange-500 dark:text-orange-400" />
-                    <span>{course.totalDurationHours}h</span>
+                    <span>{course.totalDurationHours} Jam</span>
                   </div>
                   <div className="flex items-center">
                     <StarIcon className="h-4 w-4 mr-1.5 text-yellow-400 dark:text-yellow-300" />
@@ -456,35 +419,28 @@ export default function ManageCoursePage() {
                 
                 <div className="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-neutral-700">
                   <span className="text-lg font-bold text-brand-purple dark:text-purple-400">
-                    {typeof course.price === 'number' ? `$${course.price}` : course.price}
+                    {typeof course.price === 'number' ? `Rp${course.price.toLocaleString()}` : course.price}
                   </span>
                   
                   <div className="flex space-x-1">
-                    <button
-                      onClick={() => setSelectedCourseForLessons(course)}
-                      className="p-2 text-gray-400 hover:text-purple-500 transition-colors rounded-md hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                      title="Manage Lessons"
-                    >
-                      <AcademicCapIcon className="h-4 w-4" />
-                    </button>
                     <Link
                       href={`/courses/${course.slug}`}
                       className="p-2 text-gray-400 hover:text-blue-500 transition-colors rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                      title="View Course"
+                      title="Lihat di Courses"
                     >
                       <EyeIcon className="h-4 w-4" />
                     </Link>
                     <button
                       onClick={() => openEditForm(course)}
                       className="p-2 text-gray-400 hover:text-green-500 transition-colors rounded-md hover:bg-green-50 dark:hover:bg-green-900/20"
-                      title="Edit Course"
+                      title="Edit Kursus"
                     >
                       <PencilIcon className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => setDeletingCourse(course)}
                       className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-md hover:bg-red-50 dark:hover:bg-red-900/20"
-                      title="Delete Course"
+                      title="Hapus Kursus"
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -501,13 +457,13 @@ export default function ManageCoursePage() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-gray-900 dark:text-neutral-100 mb-4">
-              {editingCourse ? 'Edit Course' : 'Create New Course'}
+              {editingCourse ? 'Edit Kursus' : 'Buat Kursus Baru'}
             </h2>
             
             <form onSubmit={editingCourse ? handleEditSubmit : handleCreateSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-1">
-                  Course Title
+                  Judul Kursus
                 </label>
                 <input
                   type="text"
@@ -520,7 +476,7 @@ export default function ManageCoursePage() {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-1">
-                  Description
+                  Deskripsi
                 </label>
                 <textarea
                   value={formData.description}
@@ -533,7 +489,7 @@ export default function ManageCoursePage() {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-1">
-                  Thumbnail URL
+                  URL Thumbnail
                 </label>
                 <input
                   type="url"
@@ -546,14 +502,14 @@ export default function ManageCoursePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-1">
-                    Category
+                    Kategori
                   </label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-neutral-600 rounded-lg focus:ring-2 focus:ring-brand-purple dark:bg-neutral-700 dark:text-white"
                   >
-                    {['Web Development', 'Data Science', 'UI/UX Design', 'Digital Marketing', 'Languages', 'Management', 'Business'].map(cat => (
+                    {['Web Development', 'Data Science', 'UI/UX Design', 'Digital Marketing', 'Bahasa', 'Manajemen', 'Bisnis'].map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
                     ))}
                   </select>
@@ -568,16 +524,16 @@ export default function ManageCoursePage() {
                     onChange={(e) => setFormData(prev => ({ ...prev, level: e.target.value as 'Pemula' | 'Menengah' | 'Lanjutan' }))}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-neutral-600 rounded-lg focus:ring-2 focus:ring-brand-purple dark:bg-neutral-700 dark:text-white"
                   >
-                    <option value="Pemula">Beginner</option>
-                    <option value="Menengah">Intermediate</option>
-                    <option value="Lanjutan">Advanced</option>
+                    <option value="Pemula">Pemula</option>
+                    <option value="Menengah">Menengah</option>
+                    <option value="Lanjutan">Lanjutan</option>
                   </select>
                 </div>
               </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-1">
-                  Price ($)
+                  Harga (Rp)
                 </label>
                 <input
                   type="number"
@@ -598,7 +554,7 @@ export default function ManageCoursePage() {
                     type="text"
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
-                    placeholder="Add tag..."
+                    placeholder="Tambah tag..."
                     className="flex-1 px-3 py-2 border border-gray-300 dark:border-neutral-600 rounded-lg focus:ring-2 focus:ring-brand-purple dark:bg-neutral-700 dark:text-white"
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
                   />
@@ -638,7 +594,7 @@ export default function ManageCoursePage() {
                   className="mr-2"
                 />
                 <label htmlFor="published" className="text-sm text-gray-700 dark:text-neutral-300">
-                  Publish immediately (will appear on courses page)
+                  Publikasikan langsung (akan langsung muncul di halaman courses)
                 </label>
               </div>
               
@@ -649,14 +605,14 @@ export default function ManageCoursePage() {
                   className="flex-1 px-4 py-2 border border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-neutral-300 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
                   disabled={submitting}
                 >
-                  Cancel
+                  Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
                   className="flex-1 px-4 py-2 bg-brand-purple text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {submitting ? 'Saving...' : editingCourse ? 'Update Course' : 'Create Course'}
+                  {submitting ? 'Menyimpan...' : editingCourse ? 'Perbarui Kursus' : 'Buat Kursus'}
                 </button>
               </div>
             </form>
@@ -670,12 +626,12 @@ export default function ManageCoursePage() {
           <div className="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-2xl p-6 w-full max-w-md">
             <div className="flex items-center mb-4">
               <ExclamationTriangleIcon className="h-6 w-6 text-red-500 mr-3" />
-              <h2 className="text-xl font-bold text-gray-900 dark:text-neutral-100">Confirm Delete</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-neutral-100">Konfirmasi Hapus</h2>
             </div>
             
             <p className="text-gray-600 dark:text-neutral-400 mb-6">
-              Are you sure you want to delete <strong>&quot;{deletingCourse.title}&quot;</strong>? 
-              This will also delete all associated lessons. This action cannot be undone.
+              Apakah Anda yakin ingin menghapus kursus <strong>&quot;{deletingCourse.title}&quot;</strong>? 
+              Kursus akan dihapus dari database dan tidak akan muncul lagi di halaman courses.
             </p>
             
             <div className="flex space-x-3">
@@ -683,13 +639,13 @@ export default function ManageCoursePage() {
                 onClick={() => setDeletingCourse(null)}
                 className="flex-1 px-4 py-2 border border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-neutral-300 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
               >
-                Cancel
+                Batal
               </button>
               <button
                 onClick={handleDeleteConfirm}
                 className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
               >
-                Delete Course
+                Hapus Kursus
               </button>
             </div>
           </div>

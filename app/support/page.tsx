@@ -3,335 +3,280 @@
 
 "use client";
 
-import React, { useState, useMemo, Fragment } from 'react';
-import Link from 'next/link'; // Pastikan Link diimpor
+import React, { useState, useEffect } from 'react';
 import {
-  MagnifyingGlassIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
   AcademicCapIcon,
+  BookOpenIcon,
   CreditCardIcon,
-  ChatBubbleLeftRightIcon,
   WrenchScrewdriverIcon,
+  MagnifyingGlassIcon,
+  ChatBubbleLeftRightIcon,
   QuestionMarkCircleIcon,
-  EnvelopeIcon,
-  ClockIcon,
-  PaperAirplaneIcon,
-  LifebuoyIcon,
-  TicketIcon,
-  PhoneIcon, // Untuk WhatsApp
-  CheckCircleIcon as CheckCircleIconSolid, // Untuk status Berhasil
-  XCircleIcon, // Untuk status Gagal
-  InformationCircleIcon, // Untuk info
-} from '@heroicons/react/24/solid';
-import { BookOpenIcon } from '@heroicons/react/24/outline';
-// Jika Anda ingin menggunakan Headless UI untuk Accordion (lebih baik untuk aksesibilitas & animasi)
-// import { Disclosure, Transition } from '@headlessui/react';
+  ChevronRightIcon
+} from '@heroicons/react/24/outline';
 
-
-// --- Data Types (Interfaces) ---
-interface FAQItem {
-  id: string;
-  question: string;
-  answer: string;
-  category?: string; // Opsional: untuk mengelompokkan FAQ
-  tags?: string[];
-}
-
+// TypeScript Types
 interface HelpCategory {
   id: string;
   title: string;
   description: string;
-  icon: React.ElementType;
+  icon: React.ComponentType<{ className?: string }>;
   color: string;
   bgColor: string;
-  link?: string; // Link ke bagian FAQ atau halaman khusus
+  link: string;
 }
 
-// --- Placeholder Data ---
-const helpCategoriesData: HelpCategory[] = [
-  {
-    id: "cat1",
-    title: "Panduan Akun & Profil",
-    description: "Kelola akun, profil, dan pengaturan notifikasi Anda.",
-    icon: AcademicCapIcon,
-    color: "text-blue-600 dark:text-blue-400",
-    bgColor: "bg-blue-100 dark:bg-blue-900/60",
-    link: "#faq-akun"
-  },
-  {
-    id: "cat2",
-    title: "Pembayaran & Langganan",
-    description: "Bantuan terkait tagihan, metode pembayaran, dan paket langganan.",
-    icon: CreditCardIcon,
-    color: "text-green-600 dark:text-green-400",
-    bgColor: "bg-green-100 dark:bg-green-900/60",
-    link: "#faq-pembayaran"
-  },
-  {
-    id: "cat3",
-    title: "Penggunaan Kursus",
-    description: "Navigasi materi, kuis, tugas, dan forum diskusi kursus.",
-    icon: BookOpenIcon, // Mengganti dengan ikon yang lebih relevan
-    color: "text-purple-600 dark:text-purple-400",
-    bgColor: "bg-purple-100 dark:bg-purple-900/60",
-    link: "#faq-kursus"
-  },
-  {
-    id: "cat4",
-    title: "Masalah Teknis & Login",
-    description: "Solusi untuk masalah login, error, atau kendala teknis lainnya.",
-    icon: WrenchScrewdriverIcon,
-    color: "text-orange-600 dark:text-orange-400",
-    bgColor: "bg-orange-100 dark:bg-orange-900/60",
-    link: "#faq-teknis"
-  },
-];
+interface FAQ {
+  id: string;
+  question: string;
+  answer: string;
+  category: string;
+}
 
-const faqData: FAQItem[] = [
-  // Akun & Profil
-  { id: "faq1", category: "Akun & Profil", question: "Bagaimana cara mengubah alamat email saya?", answer: "Anda dapat mengubah alamat email melalui halaman 'Pengaturan Akun' di profil Anda. Pastikan untuk memverifikasi email baru setelah perubahan.", tags: ["email", "akun", "profil"] },
-  { id: "faq2", category: "Akun & Profil", question: "Saya lupa password, bagaimana cara meresetnya?", answer: "Pada halaman login, klik tautan 'Lupa Password?'. Masukkan alamat email Anda yang terdaftar, dan kami akan mengirimkan instruksi untuk mereset password Anda melalui email.", tags: ["password", "login", "reset"] },
-  // Pembayaran & Langganan
-  { id: "faq3", category: "Pembayaran & Langganan", question: "Metode pembayaran apa saja yang diterima?", answer: "Kami menerima Kartu Kredit/Debit (Visa, Mastercard), Virtual Account, GoPay, OVO, dan transfer bank. Pilihan lengkap akan tersedia saat checkout.", tags: ["pembayaran", "metode", "kartu kredit", "gopay"] },
-  { id: "faq4", category: "Pembayaran & Langganan", question: "Bagaimana cara membatalkan langganan saya?", answer: "Anda dapat mengelola langganan Anda melalui halaman 'Pengaturan Akun' > 'Langganan'. Pembatalan akan berlaku efektif pada akhir siklus tagihan saat ini.", tags: ["langganan", "berhenti", "batal"] },
-  // Penggunaan Kursus
-  { id: "faq5", category: "Penggunaan Kursus", question: "Apakah saya bisa mendapatkan sertifikat setelah menyelesaikan kursus?", answer: "Ya, sebagian besar kursus kami menyediakan sertifikat digital setelah Anda menyelesaikan semua materi dan tugas. Informasi ketersediaan sertifikat ada di halaman detail setiap kursus.", tags: ["sertifikat", "kursus", "lulus"] },
-  { id: "faq6", category: "Penggunaan Kursus", question: "Bagaimana cara menghubungi pengajar jika ada pertanyaan terkait materi?", answer: "Setiap kursus memiliki forum diskusi di mana Anda bisa bertanya kepada pengajar atau berdiskusi dengan siswa lain. Beberapa pengajar juga menyediakan sesi Q&A langsung.", tags: ["pengajar", "diskusi", "forum", "materi"] },
-  // Teknis & Login
-  { id: "faq7", category: "Teknis & Login", question: "Video kursus tidak bisa diputar, apa yang harus saya lakukan?", answer: "Pastikan koneksi internet Anda stabil. Coba bersihkan cache browser Anda atau gunakan browser lain. Jika masalah berlanjut, hubungi tim dukungan kami dengan menyertakan detail browser dan perangkat yang Anda gunakan.", tags: ["video", "error", "teknis", "putar"] },
-  { id: "faq8", category: "Teknis & Login", question: "Saya tidak bisa login meskipun password sudah benar.", answer: "Pastikan tidak ada kesalahan ketik dan Caps Lock tidak aktif. Coba bersihkan cookie browser Anda. Jika masih bermasalah, Anda bisa mencoba mereset password Anda atau menghubungi dukungan teknis kami.", tags: ["login", "gagal", "password", "akun"] }
-];
+interface SupportData {
+  categories: HelpCategory[];
+  faqs: FAQ[];
+}
 
-// --- Sub-Komponen ---
+interface APICategoryData {
+  id: string;
+  title: string;
+  description: string;
+  iconType: string;
+  color: string;
+  bgColor: string;
+  link: string;
+}
 
-const FAQAccordionItem = ({ faqItem, defaultOpen = false }: { faqItem: FAQItem, defaultOpen?: boolean }) => {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+interface APISupportResponse {
+  categories: APICategoryData[];
+  faqs: FAQ[];
+}
 
-  return (
-    <div className="border border-gray-200 dark:border-neutral-700/80 rounded-xl shadow-sm overflow-hidden bg-white dark:bg-neutral-800 transition-all duration-300 hover:shadow-md">
-      <h3>
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex justify-between items-center p-5 sm:p-6 text-left text-gray-700 dark:text-neutral-200 hover:bg-gray-50 dark:hover:bg-neutral-700/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple dark:focus-visible:ring-purple-500 transition-colors"
-          aria-expanded={isOpen}
-          aria-controls={`faq-answer-${faqItem.id}`}
-        >
-          <span className="font-semibold text-sm sm:text-base">{faqItem.question}</span>
-          <ChevronDownIcon className={`h-5 w-5 text-gray-500 dark:text-neutral-400 transform transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
-        </button>
-      </h3>
-      {isOpen && (
-        <div
-          id={`faq-answer-${faqItem.id}`}
-          className="px-5 sm:px-6 pb-5 pt-3 border-t border-gray-200 dark:border-neutral-700 animate-fadeInDown"
-        >
-          <p className="text-sm text-gray-600 dark:text-neutral-300 leading-relaxed whitespace-pre-line">
-            {faqItem.answer}
-          </p>
-        </div>
-      )}
-    </div>
-  );
+// API function to fetch support data
+const fetchSupportData = async (): Promise<SupportData> => {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/support`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.ok) {
+      const data: APISupportResponse = await response.json();
+      
+      // Map icons for categories
+      const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+        'account': AcademicCapIcon,
+        'payment': CreditCardIcon,
+        'course': BookOpenIcon,
+        'technical': WrenchScrewdriverIcon,
+      };
+
+      const categoriesWithIcons = data.categories.map((cat: APICategoryData) => ({
+        ...cat,
+        icon: iconMap[cat.iconType] || QuestionMarkCircleIcon
+      }));
+
+      return {
+        categories: categoriesWithIcons,
+        faqs: data.faqs || []
+      };
+    } else {
+      // Return default data if API fails
+      return {
+        categories: [],
+        faqs: []
+      };
+    }
+  } catch (error) {
+    console.error('Support API error:', error);
+    return {
+      categories: [],
+      faqs: []
+    };
+  }
 };
 
-
 export default function SupportPage() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [contactForm, setContactForm] = useState({ name: "", email: "", subject: "Dukungan Umum", message: "" });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<"success" | "error" | null>(null);
+  const [supportData, setSupportData] = useState<SupportData>({
+    categories: [],
+    faqs: []
+  });
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  const WHATSAPP_NUMBER = "6285647882215"; // Nomor WhatsApp tanpa + atau 0 di depan untuk link wa.me
-  const WHATSAPP_MESSAGE = encodeURIComponent("Halo tim dukungan Devlab, saya membutuhkan bantuan terkait...");
+  useEffect(() => {
+    const loadSupportData = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchSupportData();
+        setSupportData(data);
+      } catch (error) {
+        console.error('Error loading support data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const filteredFaqs = useMemo(() => {
-    if (!searchTerm.trim()) return faqData; // Tampilkan semua jika search kosong
-    const lowerSearchTerm = searchTerm.toLowerCase();
-    return faqData.filter(faq =>
-      faq.question.toLowerCase().includes(lowerSearchTerm) ||
-      faq.answer.toLowerCase().includes(lowerSearchTerm) ||
-      (faq.tags && faq.tags.some(tag => tag.toLowerCase().includes(lowerSearchTerm)))
+    loadSupportData();
+  }, []);
+
+  const { categories, faqs } = supportData;
+
+  // Filter FAQs based on search query and selected category
+  const filteredFAQs = faqs.filter(faq => {
+    const matchesSearch = faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         faq.answer.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = !selectedCategory || faq.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 lg:px-8 py-8 lg:py-12 animate-pulse">
+        <div className="h-8 bg-gray-200 dark:bg-neutral-700 rounded w-1/3 mb-6"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-32 bg-gray-200 dark:bg-neutral-700 rounded-2xl"></div>
+          ))}
+        </div>
+        <div className="space-y-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-16 bg-gray-200 dark:bg-neutral-700 rounded-lg"></div>
+          ))}
+        </div>
+      </div>
     );
-  }, [searchTerm]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setContactForm(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setSubmitStatus(null);
-    console.log("Mengirim data dukungan:", contactForm);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    const success = Math.random() > 0.2; // 80% chance of success
-    if (success) {
-      setSubmitStatus("success");
-      setContactForm({ name: "", email: "", subject: "Dukungan Umum", message: "" });
-    } else {
-      setSubmitStatus("error");
-    }
-    setIsSubmitting(false);
-  };
-
+  }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-neutral-900 text-text-light-primary dark:text-text-dark-primary">
-      {/* <section className="relative bg-gradient-to-br from-brand-purple via-purple-600 to-indigo-700 dark:from-purple-800 dark:via-purple-700 dark:to-indigo-800 text-white py-20 sm:py-24 lg:py-32 px-4 sm:px-6 lg:px-8 text-center shadow-2xl overflow-hidden">
-        <div className="absolute inset-0 opacity-10 dark:opacity-20">
-        </div>
-        <div className="relative z-10">
-            <LifebuoyIcon className="h-20 w-20 sm:h-24 sm:w-24 text-purple-300 dark:text-purple-400 mx-auto mb-6 opacity-90" />
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tighter mb-5">
-            Pusat Bantuan Devlab
-            </h1>
-            <p className="text-lg sm:text-xl text-purple-100 dark:text-purple-200 max-w-3xl mx-auto opacity-95 leading-relaxed">
-            Butuh bantuan? Kami siap membantu Anda! Jelajahi FAQ kami, temukan panduan, atau hubungi tim dukungan kami untuk solusi cepat.
-            </p>
-        </div>
-      </section> */}
+    <div className="container mx-auto px-4 lg:px-8 py-8 lg:py-12 space-y-10">
+      
+      {/* Header */}
+      <div className="text-center lg:text-left">
+        <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          Pusat Bantuan & Dukungan
+        </h1>
+        <p className="text-gray-600 dark:text-neutral-400 text-lg max-w-2xl mx-auto lg:mx-0">
+          Temukan jawaban untuk pertanyaan Anda atau hubungi tim dukungan kami untuk bantuan lebih lanjut.
+        </p>
+      </div>
 
-      <div className="max-w-7xl mx-auto py-12 sm:py-16 px-4 sm:px-6 lg:px-8 space-y-20">
-        {/* <section id="search-faq" aria-labelledby="search-faq-heading">
-          <div className="max-w-3xl mx-auto relative">
-            <label htmlFor="faq-search-input" className="sr-only">Cari Bantuan</label>
-            <MagnifyingGlassIcon className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 h-5 w-5 sm:h-6 sm:w-6 text-gray-400 dark:text-neutral-500 pointer-events-none" />
-            <input
-              id="faq-search-input"
-              type="search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Ketik pertanyaan, topik, atau kata kunci (misal: 'password', 'sertifikat')"
-              className="w-full pl-12 sm:pl-14 pr-4 py-4 sm:py-5 rounded-xl border-2 border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm sm:text-base focus:ring-2 focus:ring-brand-purple dark:focus:ring-purple-500 focus:border-transparent shadow-md transition-all focus:shadow-lg"
-            />
-          </div>
-        </section> */}
+      {/* Search Bar */}
+      <div className="max-w-2xl mx-auto">
+        <div className="relative">
+          <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-neutral-500" />
+          <input
+            type="search"
+            placeholder="Ketik pertanyaan, topik, atau kata kunci (misal: 'password', 'sertifikat')"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-neutral-400 focus:ring-2 focus:ring-brand-purple focus:border-transparent text-lg"
+          />
+        </div>
+      </div>
 
-        {/* <section id="help-categories" aria-labelledby="help-categories-heading">
-          <h2 id="help-categories-heading" className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-neutral-100 mb-10 text-center tracking-tight">
-            Jelajahi Kategori Bantuan
+      {/* Help Categories */}
+      {categories.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {categories.map((category) => {
+            const IconComponent = category.icon;
+            return (
+              <div
+                key={category.id}
+                onClick={() => setSelectedCategory(selectedCategory === category.id ? null : category.id)}
+                className={`p-6 rounded-2xl border-2 transition-all duration-300 cursor-pointer hover:shadow-lg ${
+                  selectedCategory === category.id
+                    ? 'border-brand-purple bg-brand-purple/5 dark:bg-brand-purple/10'
+                    : 'border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:border-brand-purple/50'
+                }`}
+              >
+                <div className={`w-12 h-12 rounded-xl ${category.bgColor} flex items-center justify-center mb-4`}>
+                  <IconComponent className={`h-6 w-6 ${category.color}`} />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  {category.title}
+                </h3>
+                <p className="text-gray-600 dark:text-neutral-400 text-sm">
+                  {category.description}
+                </p>
+                <ChevronRightIcon className="h-5 w-5 text-gray-400 dark:text-neutral-500 mt-3" />
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* FAQ Section */}
+      <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-xl border border-gray-200 dark:border-neutral-700 p-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Pertanyaan yang Sering Diajukan
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-            {helpCategoriesData.map((category) => (
-              <Link href={category.link || "#support-faq"} key={category.id} className="group block">
-                <div className="bg-white dark:bg-neutral-800 p-6 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1.5 border border-gray-200 dark:border-neutral-700/70 h-full flex flex-col items-center text-center hover:border-brand-purple/50 dark:hover:border-purple-500/50">
-                  <div className={`p-5 rounded-full ${category.bgColor} mb-5 inline-flex group-hover:scale-110 transition-transform duration-300 shadow-inner`}>
-                    <category.icon className={`h-10 w-10 ${category.color}`} />
+          {selectedCategory && (
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className="text-brand-purple hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-medium"
+            >
+              Lihat Semua
+            </button>
+          )}
+        </div>
+
+        {filteredFAQs.length > 0 ? (
+          <div className="space-y-4">
+            {filteredFAQs.map((faq) => (
+              <details
+                key={faq.id}
+                className="group bg-gray-50 dark:bg-neutral-700 rounded-lg border border-gray-200 dark:border-neutral-600 overflow-hidden"
+              >
+                <summary className="p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-neutral-600 transition-colors list-none">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium text-gray-900 dark:text-white pr-4">
+                      {faq.question}
+                    </h3>
+                    <ChevronRightIcon className="h-5 w-5 text-gray-500 dark:text-neutral-400 group-open:rotate-90 transition-transform" />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-800 dark:text-neutral-100 mb-2 group-hover:text-brand-purple dark:group-hover:text-purple-400 transition-colors">
-                    {category.title}
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-neutral-400 flex-grow leading-relaxed">
-                    {category.description}
+                </summary>
+                <div className="px-4 pb-4">
+                  <p className="text-gray-600 dark:text-neutral-300 leading-relaxed">
+                    {faq.answer}
                   </p>
                 </div>
-              </Link>
+              </details>
             ))}
           </div>
-        </section> */}
-
-        {/* <section id="support-faq" aria-labelledby="faq-heading">
-          <h2 id="faq-heading" className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-neutral-100 mb-10 text-center tracking-tight">
-            Pertanyaan Umum (FAQ)
-          </h2>
-          {filteredFaqs.length > 0 ? (
-            <div className="max-w-3xl mx-auto space-y-5">
-              {filteredFaqs.map((faq, index) => (
-                <FAQAccordionItem key={faq.id} faqItem={faq} defaultOpen={index === 0 && !!searchTerm} /> // Buka item pertama jika ada hasil search
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-10 bg-white dark:bg-neutral-800/80 rounded-xl shadow-md border border-gray-200 dark:border-neutral-700/70">
-              <QuestionMarkCircleIcon className="mx-auto h-16 w-16 text-gray-400 dark:text-neutral-600 mb-3" />
-              <h3 className="text-xl font-semibold text-gray-800 dark:text-neutral-200">Tidak Ada Hasil</h3>
-              <p className="mt-2 text-sm text-gray-500 dark:text-neutral-400">
-                Maaf, tidak ada FAQ yang cocok dengan kata kunci "{searchTerm}". Coba kata kunci lain.
-              </p>
-            </div>
-          )}
-        </section> */}
-
-        <section id="contact-support" aria-labelledby="contact-support-heading">
-          <div className="bg-white dark:bg-neutral-800/80 p-6 sm:p-10 rounded-2xl shadow-2xl border border-gray-200 dark:border-neutral-700/70">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
-              <div className="md:pr-8">
-                <TicketIcon className="h-12 w-12 text-brand-purple dark:text-purple-400 mb-4"/>
-                <h2 id="contact-support-heading" className="text-3xl font-bold text-gray-900 dark:text-neutral-100 mb-3 tracking-tight">
-                  Perlu Bantuan Lebih Lanjut?
-                </h2>
-                <p className="text-gray-600 dark:text-neutral-400 mb-6 leading-relaxed">
-                  Tim dukungan kami siap membantu Anda dengan pertanyaan atau masalah apa pun yang mungkin Anda hadapi. Isi formulir di samping atau hubungi kami melalui WhatsApp.
-                </p>
-                <div className="space-y-3 text-sm text-gray-700 dark:text-neutral-300">
-                    <p className="flex items-center">
-                        <ClockIcon className="h-5 w-5 mr-2.5 text-gray-500 dark:text-neutral-400 flex-shrink-0" />
-                        Jam Operasional: Senin - Jumat, 08:00 - 17:00 WIB
-                    </p>
-                    <p className="flex items-center">
-                        <EnvelopeIcon className="h-5 w-5 mr-2.5 text-gray-500 dark:text-neutral-400 flex-shrink-0" />
-                        Email: support@devlab.com (Respon dalam 24 jam kerja)
-                    </p>
-                </div>
-                 <a
-                    href={`https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_MESSAGE}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-8 inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-semibold rounded-lg text-white bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-500 transition-colors shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-neutral-800"
-                >
-                    <PhoneIcon className="h-5 w-5 mr-2" /> Chat via WhatsApp
-                </a>
-              </div>
-
-              <form onSubmit={handleFormSubmit} className="space-y-5 bg-gray-50 dark:bg-neutral-700/50 p-6 sm:p-8 rounded-xl shadow-inner">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-neutral-200 mb-1.5">Nama Lengkap <span className="text-red-500">*</span></label>
-                  <input type="text" name="name" id="name" value={contactForm.name} onChange={handleInputChange} required className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-sm focus:ring-1 focus:ring-brand-purple dark:focus:ring-purple-500 focus:border-transparent shadow-sm" />
-                </div>
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-neutral-200 mb-1.5">Alamat Email <span className="text-red-500">*</span></label>
-                  <input type="email" name="email" id="email" value={contactForm.email} onChange={handleInputChange} required className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-sm focus:ring-1 focus:ring-brand-purple dark:focus:ring-purple-500 focus:border-transparent shadow-sm" />
-                </div>
-                <div>
-                  <label htmlFor="subject" className="block text-sm font-medium text-gray-700 dark:text-neutral-200 mb-1.5">Subjek <span className="text-red-500">*</span></label>
-                  <input type="text" name="subject" id="subject" value={contactForm.subject} onChange={handleInputChange} required className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-sm focus:ring-1 focus:ring-brand-purple dark:focus:ring-purple-500 focus:border-transparent shadow-sm" />
-                </div>
-                <div>
-                  <label htmlFor="message" className="block text-sm font-medium text-gray-700 dark:text-neutral-200 mb-1.5">Pesan Anda <span className="text-red-500">*</span></label>
-                  <textarea name="message" id="message" rows={5} value={contactForm.message} onChange={handleInputChange} required className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-sm focus:ring-1 focus:ring-brand-purple dark:focus:ring-purple-500 focus:border-transparent shadow-sm min-h-[120px]" />
-                </div>
-                <div>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-semibold rounded-lg text-white bg-brand-purple hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-500 transition-colors shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:focus:ring-offset-neutral-800 disabled:opacity-70 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <ClockIcon className="animate-spin h-5 w-5 mr-2" /> Mengirim...
-                      </>
-                    ) : (
-                      <>
-                        <PaperAirplaneIcon className="h-5 w-5 mr-2 transform -rotate-45" /> Kirim Tiket Dukungan
-                      </>
-                    )}
-                  </button>
-                </div>
-                {submitStatus === "success" && (
-                  <div className="p-3 rounded-md bg-green-100 dark:bg-green-700/40 text-green-700 dark:text-green-200 text-sm flex items-center shadow">
-                    <CheckCircleIconSolid className="h-5 w-5 mr-2 flex-shrink-0"/> Pesan Anda telah berhasil terkirim. Tim kami akan segera menghubungi Anda.
-                  </div>
-                )}
-                {submitStatus === "error" && (
-                  <div className="p-3 rounded-md bg-red-100 dark:bg-red-700/40 text-red-700 dark:text-red-200 text-sm flex items-center shadow">
-                    <XCircleIcon className="h-5 w-5 mr-2 flex-shrink-0"/> Maaf, terjadi kesalahan saat mengirim pesan. Silakan coba lagi atau hubungi via WhatsApp.
-                  </div>
-                )}
-              </form>
-            </div>
+        ) : (
+          <div className="text-center py-8">
+            <QuestionMarkCircleIcon className="h-16 w-16 text-gray-300 dark:text-neutral-600 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Tidak ada FAQ ditemukan
+            </h3>
+            <p className="text-gray-600 dark:text-neutral-400">
+              Coba gunakan kata kunci lain atau hubungi tim dukungan kami.
+            </p>
           </div>
-        </section>
+        )}
+      </div>
+
+      {/* Contact Support Section */}
+      <div className="bg-gradient-to-r from-brand-purple to-purple-700 p-8 rounded-2xl text-white text-center">
+        <ChatBubbleLeftRightIcon className="h-12 w-12 mx-auto mb-4" />
+        <h3 className="text-2xl font-bold mb-4">Masih Butuh Bantuan?</h3>
+        <p className="text-white/90 mb-6 max-w-2xl mx-auto">
+          Tim dukungan kami siap membantu Anda 24/7. Hubungi kami melalui chat langsung atau email.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <button className="bg-white text-brand-purple hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors">
+            Chat Langsung
+          </button>
+          <button className="border-2 border-white text-white hover:bg-white hover:text-brand-purple px-8 py-3 rounded-lg font-semibold transition-colors">
+            Kirim Email
+          </button>
+        </div>
       </div>
     </div>
   );

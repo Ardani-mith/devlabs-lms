@@ -25,23 +25,34 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'img.youtube.com',
+        hostname: 'youtu.be', // Short YouTube URLs
         pathname: '/**',
       },
       {
         protocol: 'https',
-        hostname: 'i.ytimg.com',
+        hostname: 'img.youtube.com', // YouTube thumbnail images
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.ytimg.com', // YouTube thumbnail images (alternative)
         pathname: '/**',
       },
       // Additional image hosting domains
       {
         protocol: 'https',
-        hostname: 'example.com', // For mock uploaded thumbnails
+        hostname: 'example.com', // Fallback domain
         pathname: '/**',
       },
       {
         protocol: 'https',
-        hostname: 'i.pinimg.com', // Pinterest images (used in mock data)
+        hostname: 'i.pinimg.com', // Pinterest images
+        pathname: '/**',
+      },
+      // Local development IPs (for safety, though these should be filtered out)
+      {
+        protocol: 'http',
+        hostname: '192.168.112.45',
         pathname: '/**',
       },
     ],
