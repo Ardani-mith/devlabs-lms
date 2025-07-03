@@ -1,28 +1,10 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { CourseDisplayCard } from '@/app/courses/CourseDisplayCard'; // Pastikan path ini benar
+import React, { useState, useMemo } from 'react';
+import { CourseDisplayCard } from '@/app/courses/CourseDisplayCard';
 import { MagnifyingGlassIcon, AdjustmentsHorizontalIcon, ChevronDownIcon, FunnelIcon, XMarkIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 import { BookOpenIcon as NoCourseIcon } from '@heroicons/react/24/solid';
-
-// Course interface definition
-interface Course {
-  id: string;
-  title: string;
-  thumbnailUrl: string;
-  instructorName: string;
-  instructorAvatarUrl?: string;
-  category: string;
-  lessonsCount: number;
-  totalDurationHours: number;
-  level: "Pemula" | "Menengah" | "Lanjutan" | "Semua Level";
-  rating?: number;
-  studentsEnrolled?: number;
-  price?: number | "Gratis";
-  courseUrl?: string;
-  isNew?: boolean;
-  tags?: string[];
-}
+import { useCourseContext } from '@/contexts/CourseContext';
 
 
 const courseCategories = ["Semua Kategori", "Web Development", "Data Science", "UI/UX Design", "Digital Marketing", "Bahasa", "Manajemen", "Bisnis"];
@@ -34,14 +16,19 @@ export default function CoursesPage() {
   const [selectedCategory, setSelectedCategory] = useState("Semua Kategori");
   const [selectedLevel, setSelectedLevel] = useState("Semua Level");
   const [showFilters, setShowFilters] = useState(false);
-  const [courses, setCourses] = useState<Course[]>([]);
+
+  // Use course context instead of local state
+  const { loading, getPublishedCourses } = useCourseContext();
+
+  // Only show published courses to public - memoized to prevent unnecessary re-calculations
+  const courses = useMemo(() => getPublishedCourses(), [getPublishedCourses]);
 
   const filteredCourses = useMemo(() => {
     return courses
       .filter(course =>
         course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         course.instructorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (course.tags && course.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
+        (course.tags && course.tags.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase())))
       )
       .filter(course =>
         selectedCategory === "Semua Kategori" || course.category === selectedCategory
@@ -50,20 +37,6 @@ export default function CoursesPage() {
         selectedLevel === "Semua Level" || course.level === selectedLevel
       );
   }, [searchTerm, selectedCategory, selectedLevel, courses]);
-
-  useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`);
-        const courseData = await response.json();
-        setCourses(courseData);
-      } catch (error) {
-        console.error('Error fetching courses:', error);
-      }
-    };
-    
-    fetchCourses();
-  }, []);
 
   return (
     <div className="space-y-10 p-4 sm:p-6 lg:p-8 text-text-light-primary dark:text-text-dark-primary">
@@ -153,7 +126,13 @@ export default function CoursesPage() {
         )}
       </div>
 
-      {filteredCourses.length > 0 ? (
+      {/* Loading State */}
+      {loading ? (
+        <div className="text-center py-16">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-purple mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-neutral-400">Memuat kursus...</p>
+        </div>
+      ) : filteredCourses.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-x-6 gap-y-10">
           {filteredCourses.map((course) => (
             <CourseDisplayCard key={course.id} course={course} />

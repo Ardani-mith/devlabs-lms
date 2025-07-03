@@ -1,106 +1,61 @@
 "use client"; // Diperlukan untuk useState (fitur search/filter)
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import TeacherCourseManager from '../manage-course/TeacherCourseManager';
 import { TeacherDisplayCard, TeacherProfile } from '@/app/teachers/TeacherDisplayCard';
 import { MagnifyingGlassIcon, AdjustmentsHorizontalIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
-
-// ✅ Consolidated teacher data - combining both datasets for consistency
-const teachers: TeacherProfile[] = [
-  // Original detailed teachers from /teachers
-  {
-    id: "1",
-    name: "Dr. Sarah Williams",
-    avatarUrl: "https://images.unsplash.com/photo-1494790108755-2616b332c2d2?w=400&h=400&fit=crop&crop=face",
-    expertiseAreas: ["React", "TypeScript", "Node.js", "GraphQL"],
-    shortBio: "10+ years experience in frontend development with expertise in React, TypeScript, and modern web technologies.",
-    coursesCount: 8,
-    lessonsCount: 120,
-    rating: 4.9,
-    isVerified: true,
-    profileUrl: "/teachers/sarah-williams",
-  },
-  {
-    id: "2",
-    name: "Prof. Michael Chen",
-    avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
-    expertiseAreas: ["Python", "TensorFlow", "PyTorch", "Data Analysis"],
-    shortBio: "PhD in Computer Science, specialized in machine learning algorithms and artificial intelligence applications.",
-    coursesCount: 12,
-    lessonsCount: 180,
-    rating: 4.8,
-    isVerified: true,
-    profileUrl: "/teachers/michael-chen",
-  },
-  {
-    id: "3",
-    name: "Emma Rodriguez",
-    avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face", 
-    expertiseAreas: ["Figma", "Adobe XD", "Prototyping", "User Research"],
-    shortBio: "Award-winning designer with 8 years experience creating intuitive and beautiful user interfaces for top companies.",
-    coursesCount: 6,
-    lessonsCount: 95,
-    rating: 4.9,
-    isVerified: true,
-    profileUrl: "/teachers/emma-rodriguez",
-  },
-  {
-    id: "4",
-    name: "David Kim",
-    avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop&crop=face",
-    expertiseAreas: ["AWS", "Docker", "Kubernetes", "CI/CD"],
-    shortBio: "Expert in cloud infrastructure, containerization, and CI/CD pipelines with experience at major tech companies.",
-    coursesCount: 10,
-    lessonsCount: 150,
-    rating: 4.7,
-    isVerified: true,
-    profileUrl: "/teachers/david-kim",
-  },
-  {
-    id: "5",
-    name: "Lisa Thompson",
-    avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop&crop=face",
-    expertiseAreas: ["SEO", "Google Ads", "Social Media", "Analytics"],
-    shortBio: "Marketing professional with proven track record in digital strategy, social media marketing, and SEO optimization.",
-    coursesCount: 7,
-    lessonsCount: 110,
-    rating: 4.8,
-    isVerified: true,
-    profileUrl: "/teachers/lisa-thompson",
-  },
-  // ✅ Added teachers from /teachers/directory for completeness
-  {
-    id: "6",
-    name: "Teacher One",
-    avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
-    expertiseAreas: ["React", "TypeScript", "Web Development"],
-    shortBio: "Experienced web developer specializing in modern frontend technologies and full-stack development.",
-    coursesCount: 5,
-    lessonsCount: 45,
-    rating: 4.8,
-    isVerified: true,
-    profileUrl: "/teachers/teacher-one",
-  },
-  {
-    id: "7",
-    name: "ZerooKnow",
-    avatarUrl: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=400&fit=crop&crop=face",
-    expertiseAreas: ["Full Stack", "DevOps", "System Architecture"],
-    shortBio: "Senior developer and platform architect with expertise in scalable web applications and cloud infrastructure.",
-    coursesCount: 7,
-    lessonsCount: 78,
-    rating: 4.9,
-    isVerified: true,
-    profileUrl: "/teachers/zerooknow",
-  }
-];
 
 const expertiseCategories = ["Semua Kategori", "Data Science", "Web Development", "UI/UX Design", "Digital Marketing", "Bahasa Inggris", "Manajemen Proyek"];
 
 function TeacherDirectoryView() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua Kategori");
+  const [teachers, setTeachers] = useState<TeacherProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch teachers from API
+  useEffect(() => {
+    const fetchTeachers = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/users?role=TEACHER`, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const apiTeachers = await response.json();
+          
+          // Transform API data to match TeacherProfile interface
+          const transformedTeachers: TeacherProfile[] = apiTeachers.map((teacher: any) => ({
+            id: teacher.id?.toString() || '',
+            name: teacher.name || 'Unknown Teacher',
+            avatarUrl: teacher.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
+            expertiseAreas: teacher.expertiseAreas || ['General'],
+            shortBio: teacher.bio || 'Experienced educator',
+            coursesCount: teacher.coursesCount || 0,
+            lessonsCount: teacher.lessonsCount || 0,
+            rating: teacher.rating || 4.5,
+            isVerified: teacher.isVerified || false,
+            profileUrl: `/teachers/${teacher.id}`,
+          }));
+
+          setTeachers(transformedTeachers);
+        } else {
+          // If API fails, use empty array
+          setTeachers([]);
+        }
+      } catch (error) {
+        console.error('Error fetching teachers:', error);
+        setTeachers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTeachers();
+  }, []);
 
   const filteredTeachers = useMemo(() => {
     return teachers.filter(teacher =>
@@ -159,14 +114,24 @@ function TeacherDirectoryView() {
       </div>
 
       {/* Teachers Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filteredTeachers.map((teacher) => (
-          <TeacherDisplayCard 
-            key={teacher.id} 
-            teacher={teacher}
-          />
-        ))}
-      </div>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="bg-gray-300 dark:bg-neutral-700 rounded-lg h-64"></div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {filteredTeachers.map((teacher) => (
+            <TeacherDisplayCard 
+              key={teacher.id} 
+              teacher={teacher}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Call to Action */}
       <div className="mt-16 text-center bg-gradient-to-r from-brand-purple/10 to-purple-600/10 dark:from-purple-500/20 dark:to-purple-800/20 rounded-2xl p-8">

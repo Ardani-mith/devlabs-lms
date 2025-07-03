@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ContentResponse, ContentFilters, Content } from '@/lib/types/content';
+import { ContentResponse, ContentFilters } from '@/lib/types/content';
 
 interface UseContentDataOptions {
   endpoint: string;
@@ -176,90 +176,4 @@ export function useNewsData(options?: Partial<UseContentDataOptions>) {
   });
 }
 
-// Mock data hook for development/testing
-export function useMockContentData(mockData: Content[]): UseContentDataReturn {
-  const [filters, setFilters] = useState<ContentFilters>({
-    search: '',
-    category: '',
-    level: '',
-    price: 'all',
-    rating: undefined,
-    status: '',
-    sortBy: 'newest',
-    sortOrder: 'desc',
-  });
-
-  const [loading, setLoading] = useState(false);
-  const [error] = useState<string | null>(null);
-
-  // Filter and sort mock data
-  const filteredData = mockData.filter(item => {
-    // Apply search filter
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase();
-      const matchesSearch = 
-        item.title.toLowerCase().includes(searchTerm) ||
-        item.description?.toLowerCase().includes(searchTerm) ||
-        item.category.toLowerCase().includes(searchTerm) ||
-        item.tags?.some(tag => tag.toLowerCase().includes(searchTerm));
-      
-      if (!matchesSearch) return false;
-    }
-
-    // Apply category filter
-    if (filters.category && item.category !== filters.category) {
-      return false;
-    }
-
-    // Apply level filter (for courses)
-    if (filters.level && item.type === 'course' && item.level !== filters.level) {
-      return false;
-    }
-
-    // Apply price filter
-    if (filters.price && filters.price !== 'all' && 'price' in item) {
-      if (filters.price === 'free' && !(item.price === 'Gratis' || item.price === 0)) {
-        return false;
-      }
-      if (filters.price === 'paid' && !(typeof item.price === 'number' && item.price > 0)) {
-        return false;
-      }
-    }
-
-    return true;
-  });
-
-  const data: ContentResponse = {
-    data: filteredData,
-    meta: {
-      page: 1,
-      pageSize: filteredData.length,
-      total: filteredData.length,
-      totalPages: 1,
-      hasNext: false,
-      hasPrev: false,
-    },
-  };
-
-  const refetch = async () => {
-    setLoading(true);
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setLoading(false);
-  };
-
-  const fetchMore = async () => {
-    // No more pages in mock data
-  };
-
-  return {
-    data,
-    loading,
-    error,
-    filters,
-    setFilters,
-    refetch,
-    fetchMore,
-    hasMore: false,
-  };
-} 
+// useMockContentData has been removed - now using real API data only 

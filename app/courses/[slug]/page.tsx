@@ -28,9 +28,30 @@ import CourseTabs from "./components/CourseTabs";
 import ModuleAccordion from "./components/ModuleAccordion";
 import CourseInfoSidebar from "./components/CourseInfoSidebar";
 import { CourseDetail, DiscussionComment, Lesson } from "./types/course";
-import { SAMPLE_COURSES } from "./data/sampleCourses";
 import { getLessonNavigation } from "./utils/courseHelpers";
 import { layoutStyles, cardStyles, textStyles, buttonStyles } from "./utils/styles";
+
+// Backend response interfaces
+interface BackendLesson {
+  id: number;
+  title: string;
+  content?: string;
+  youtubeUrl: string;
+  youtubeVideoId?: string;
+  duration?: number; // in seconds
+  order: number;
+}
+
+interface BackendModule {
+  id: number;
+  title: string;
+  lessons: BackendLesson[];
+}
+
+interface BackendCourseData {
+  modules: BackendModule[];
+  [key: string]: unknown;
+}
 
 export default function CourseDetailPage({
   params,
@@ -51,14 +72,77 @@ export default function CourseDetailPage({
   );
 
   useEffect(() => {
-    const currentCourse = SAMPLE_COURSES.find(
-      (course) => course.slug === slug
-    );
-    if (currentCourse) {
-      setCourseData(currentCourse);
-    } else {
-      setCourseData(null);
-    }
+    const fetchCourseData = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/courses/${slug}`);
+        if (response.ok) {
+          const courseData: BackendCourseData = await response.json();
+          // Convert API response to CourseDetail format
+          const convertedCourse: CourseDetail = {
+            slug: (courseData as unknown as { slug: string }).slug,
+            title: (courseData as unknown as { title: string }).title,
+            tagline: (courseData as unknown as { description: string }).description,
+            instructorName: (courseData as unknown as { instructor?: { name?: string } }).instructor?.name || 'Unknown Instructor',
+            instructorAvatar: (courseData as unknown as { instructor?: { avatarUrl?: string } }).instructor?.avatarUrl,
+            instructorBio: (courseData as unknown as { instructor?: { bio?: string } }).instructor?.bio || 'Experienced instructor',
+            instructorTitle: (courseData as unknown as { instructor?: { title?: string } }).instructor?.title || 'Course Instructor',
+            instructorCoursesCount: (courseData as unknown as { instructor?: { coursesCount?: number } }).instructor?.coursesCount || 1,
+            instructorStudentsCount: (courseData as unknown as { instructor?: { studentsCount?: number } }).instructor?.studentsCount || 0,
+            instructorRating: (courseData as unknown as { instructor?: { rating?: number } }).instructor?.rating || 4.5,
+            thumbnailUrl: (courseData as unknown as { thumbnailUrl: string }).thumbnailUrl || '',
+            bannerUrl: (courseData as unknown as { thumbnailUrl: string }).thumbnailUrl || '',
+            rating: (courseData as unknown as { rating?: number }).rating || 4.5,
+            reviewCount: (courseData as unknown as { reviewCount?: number }).reviewCount || 0,
+            studentCount: (courseData as unknown as { studentsEnrolled?: number }).studentsEnrolled || 0,
+            userProgress: 0, // This would come from user progress API
+            isEnrolled: false, // This would come from user enrollment API
+            lastAccessedLessonUrl: undefined,
+            lastAccessedLessonTitle: undefined,
+            price: (courseData as unknown as { price?: number }).price || 0,
+            originalPrice: undefined,
+            fullDescription: (courseData as unknown as { description?: string }).description || 'No description available',
+            whatYouWillLearn: ['Course content to be loaded from modules'],
+            targetAudience: ['Students interested in ' + ((courseData as unknown as { category?: string }).category || 'this topic')],
+            prerequisites: ['Basic understanding of the topic'],
+            skillsYouWillGain: (courseData as unknown as { tags?: string[] }).tags || [],
+            toolsYouWillUse: [],
+            language: 'Bahasa Indonesia',
+            totalLessons: (courseData as unknown as { lessonsCount?: number }).lessonsCount || 0,
+            totalVideoHours: Math.floor(((courseData as unknown as { totalDurationHours?: number }).totalDurationHours || 1) * 0.8),
+            totalDurationHours: (courseData as unknown as { totalDurationHours?: number }).totalDurationHours || 1,
+            hasCertificate: true,
+            category: (courseData as unknown as { category?: string }).category || 'General',
+                         level: ((courseData as unknown as { level?: string }).level || 'Pemula') as "Pemula" | "Menengah" | "Lanjutan" | "Semua Level",
+            updatedAt: (courseData as unknown as { updatedAt?: string }).updatedAt || new Date().toISOString(),
+            modules: courseData.modules?.map((module: BackendModule) => ({
+              ...module,
+              id: module.id.toString(),
+              lessons: module.lessons?.map((lesson: BackendLesson) => ({
+                id: lesson.id.toString(),
+                title: lesson.title,
+                type: "video" as const,
+                durationMinutes: lesson.duration ? Math.round(lesson.duration / 60) : undefined,
+                status: "selanjutnya" as const, // Default status
+                url: lesson.youtubeUrl || "#",
+                isPreviewable: false
+              })) || []
+            })) || [],
+            discussions: [],
+            faq: [],
+            certificateUrl: `/certificates/${(courseData as unknown as { slug: string }).slug}`,
+            relatedCourses: []
+          };
+          setCourseData(convertedCourse);
+        } else {
+          setCourseData(null);
+        }
+      } catch (error) {
+        console.error('Error fetching course data:', error);
+        setCourseData(null);
+      }
+    };
+
+    fetchCourseData();
   }, [slug]);
 
   const handleCommentSubmit = (e: React.FormEvent) => {
@@ -95,7 +179,7 @@ export default function CourseDetailPage({
     setIsMarkingComplete(true);
     try {
       // API call to mark lesson complete
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${courseData.slug}/lessons/${lessonId}/complete`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/courses/${courseData.slug}/lessons/${lessonId}/complete`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

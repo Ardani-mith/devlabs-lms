@@ -8,8 +8,9 @@ import {
   ClockIcon, StarIcon, ChartBarIcon, XMarkIcon, CheckIcon, ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCourseManagement } from '@/hooks/useCourseManagement';
-import { TeacherCourse, CourseStats, CourseFormData, NotificationData } from './types/course-management';
+import { useCourseContext, Course, CourseFormData } from '@/contexts/CourseContext';
+import { CourseStats, NotificationData, LessonFormData } from './types/course-management';
+import LessonManager from './components/LessonManager';
 
 // Inline Components for demonstration - Original Stats Styling
 const CourseStatsGrid: React.FC<{ stats: CourseStats }> = ({ stats }) => (
@@ -105,13 +106,56 @@ const CourseManagementHeader: React.FC<{ onCreateClick: () => void }> = ({ onCre
 );
 
 const CourseCard: React.FC<{
-  course: TeacherCourse;
-  onEdit: (course: TeacherCourse) => void;
-  onDelete: (course: TeacherCourse) => void;
+  course: Course;
+  onEdit: (course: Course) => void;
+  onDelete: (course: Course) => void;
 }> = ({ course, onEdit, onDelete }) => {
-  const imageUrl = course.thumbnailUrl?.includes('i.pinimg.com') 
-    ? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=600&fit=crop'
-    : course.thumbnailUrl;
+  // Function to get proper thumbnail URL
+  const getThumbnailUrl = (course: Course): string => {
+    // If course has YouTube video ID, use YouTube thumbnail
+    if (course.youtubeVideoId) {
+      return `https://img.youtube.com/vi/${course.youtubeVideoId}/maxresdefault.jpg`;
+    }
+    
+    // If course has custom YouTube thumbnail URL, use it
+    if (course.youtubeThumbnailUrl) {
+      return course.youtubeThumbnailUrl;
+    }
+    
+    // Handle Pinterest URLs (fallback to Unsplash)
+    if (course.thumbnailUrl?.includes('i.pinimg.com')) {
+      return 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=600&fit=crop';
+    }
+    
+    // Handle YouTube embed URLs (extract video ID and use thumbnail)
+    if (course.thumbnailUrl?.includes('youtube.com/embed/')) {
+      const videoIdMatch = course.thumbnailUrl.match(/youtube\.com\/embed\/([^?]+)/);
+      if (videoIdMatch && videoIdMatch[1]) {
+        return `https://img.youtube.com/vi/${videoIdMatch[1]}/maxresdefault.jpg`;
+      }
+    }
+    
+    // Handle YouTube watch URLs
+    if (course.thumbnailUrl?.includes('youtube.com/watch')) {
+      const videoIdMatch = course.thumbnailUrl.match(/[?&]v=([^&]+)/);
+      if (videoIdMatch && videoIdMatch[1]) {
+        return `https://img.youtube.com/vi/${videoIdMatch[1]}/maxresdefault.jpg`;
+      }
+    }
+    
+    // Handle youtu.be URLs
+    if (course.thumbnailUrl?.includes('youtu.be/')) {
+      const videoIdMatch = course.thumbnailUrl.match(/youtu\.be\/([^?]+)/);
+      if (videoIdMatch && videoIdMatch[1]) {
+        return `https://img.youtube.com/vi/${videoIdMatch[1]}/maxresdefault.jpg`;
+      }
+    }
+    
+    // Default fallback or original thumbnail URL
+    return course.thumbnailUrl || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=600&fit=crop';
+  };
+
+  const imageUrl = getThumbnailUrl(course);
 
   return (
     <div className="relative flex flex-col bg-white dark:bg-transparent border border-gray-200 dark:border-transparent rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 ease-in-out transform hover:-translate-y-1.5 overflow-hidden h-full">
@@ -247,6 +291,7 @@ const CourseForm: React.FC<{
   onTagInputChange: (value: string) => void;
   onAddTag: () => void;
   onRemoveTag: (tag: string) => void;
+  onLessonsChange: (lessons: LessonFormData[]) => void;
 }> = ({
   mode,
   formData,
@@ -259,9 +304,10 @@ const CourseForm: React.FC<{
   onTagInputChange,
   onAddTag,
   onRemoveTag,
+  onLessonsChange,
 }) => (
   <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-    <div className="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+    <div className="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-2xl p-6 w-full max-w-4xl max-h-[95vh] overflow-y-auto">
       <h2 className="text-xl font-bold text-gray-900 dark:text-neutral-100 mb-4">
         {mode === 'edit' ? 'Edit Kursus' : 'Buat Kursus Baru'}
       </h2>
@@ -349,6 +395,16 @@ const CourseForm: React.FC<{
             min="0"
           />
         </div>
+
+        {/* Lessons Management */}
+        <div className="col-span-2">
+          <LessonManager
+            lessons={formData.lessons}
+            onLessonsChange={onLessonsChange}
+            onCourseMetaChange={(meta) => onFormDataChange(meta)}
+            disabled={submitting}
+          />
+        </div>
         
         {/* Tags */}
         <div>
@@ -427,7 +483,7 @@ const CourseForm: React.FC<{
 );
 
 const DeleteConfirmation: React.FC<{
-  course: TeacherCourse;
+  course: Course;
   onConfirm: () => void;
   onCancel: () => void;
 }> = ({ course, onConfirm, onCancel }) => (
@@ -465,39 +521,54 @@ const DeleteConfirmation: React.FC<{
 export default function CourseManagementFinalOptimized() {
   const { user } = useAuth();
   const {
-    // State
-    courses,
+    courses: allCourses,
     loading,
-    submitting,
-    showCreateForm,
-    editingCourse,
-    deletingCourse,
-    notification,
-    formData,
-    tagInput,
-    stats,
-    config,
-    
-    // Actions
     createCourse,
     updateCourse,
     deleteCourse,
-    
-    // Form management
-    openCreateForm,
-    openEditForm,
-    closeEditForm,
-    updateFormData,
-    
-    // Tag management
-    setTagInput,
-    addTag,
-    removeTag,
-    
-    // UI management
-    setDeletingCourse,
-    hideNotification,
-  } = useCourseManagement();
+    getCoursesByInstructor
+  } = useCourseContext();
+
+  // Local state for form management
+  const [showCreateForm, setShowCreateForm] = React.useState(false);
+  const [editingCourse, setEditingCourse] = React.useState<Course | null>(null);
+  const [deletingCourse, setDeletingCourse] = React.useState<Course | null>(null);
+  const [notification, setNotification] = React.useState<NotificationData | null>(null);
+  const [submitting, setSubmitting] = React.useState(false);
+  const [formData, setFormData] = React.useState<CourseFormData>({
+    title: '',
+    description: '',
+    thumbnailUrl: '',
+    youtubeEmbedUrl: '',
+    youtubeVideoId: '',
+    youtubeThumbnailUrl: '',
+    category: 'Web Development',
+    level: 'Pemula',
+    price: 0,
+    published: false,
+    tags: [],
+    lessonsCount: 1,
+    totalDurationHours: 1
+  });
+  const [tagInput, setTagInput] = React.useState('');
+
+  // Get teacher's courses
+  const courses = user ? getCoursesByInstructor(user.id?.toString() || '') : [];
+
+  // Calculate stats
+  const stats: CourseStats = {
+    totalCourses: courses.length,
+    totalStudents: courses.reduce((sum, course) => sum + (course.studentsEnrolled || 0), 0),
+    averageRating: courses.length > 0 
+      ? courses.reduce((sum, course) => sum + (course.rating || 0), 0) / courses.length
+      : 0,
+    publishedCourses: courses.filter(course => course.published).length
+  };
+
+  const config = {
+    categories: ['Web Development', 'Data Science', 'UI/UX Design', 'Digital Marketing', 'Bahasa', 'Manajemen', 'Bisnis'],
+    enableStats: true
+  };
 
   // Access control
   if (!user || (user.role !== 'TEACHER' && user.role !== 'ADMIN')) {
@@ -531,19 +602,19 @@ export default function CourseManagementFinalOptimized() {
   // Form submission handlers
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createCourse(formData);
+    await createCourse();
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingCourse) {
-      await updateCourse(editingCourse.id, formData);
+      await updateCourse();
     }
   };
 
   const handleDeleteConfirm = async () => {
     if (deletingCourse) {
-      await deleteCourse(deletingCourse.id);
+      await deleteCourse();
     }
   };
 
@@ -593,6 +664,7 @@ export default function CourseManagementFinalOptimized() {
           onTagInputChange={setTagInput}
           onAddTag={addTag}
           onRemoveTag={removeTag}
+          onLessonsChange={(lessons) => updateFormData({ lessons })}
         />
       )}
 

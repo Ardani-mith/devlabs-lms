@@ -1,161 +1,50 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
-import Image from 'next/image';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import {
-  CheckCircleIcon, // Untuk status Berhasil, Sudah Dibayar
-  ClockIcon,       // Untuk status Diproses, Menunggu Pembayaran
-  XCircleIcon,     // Untuk status Gagal
-  ArrowDownTrayIcon, // Untuk download PDF
-  InformationCircleIcon, // Untuk info
+  CreditCardIcon,
+  CheckCircleIcon,
   MagnifyingGlassIcon,
-  AdjustmentsHorizontalIcon,
+  XCircleIcon,
+  DocumentArrowDownIcon,
+  ClockIcon,
   ChevronDownIcon,
-  CreditCardIcon, // Untuk metode pembayaran
-  BanknotesIcon,  // Untuk metode pembayaran lain
-  ReceiptPercentIcon, // Untuk promo
-  TagIcon, // Untuk deskripsi item
-  XMarkIcon, // Untuk menutup banner
-} from '@heroicons/react/24/solid'; // Menggunakan solid untuk ikon yang lebih menonjol
+  AdjustmentsHorizontalIcon,
+  XMarkIcon,
+  TagIcon,
+  InformationCircleIcon,
+  ArrowPathIcon,
+} from '@heroicons/react/24/outline';
 
-// --- Data Types ---
-type PaymentStatus = "Sudah Dibayar" | "Menunggu Pembayaran" | "Gagal";
+// --- TypeScript Types ---
 interface CurrentBillSummary {
   totalAmount: number;
   currency: string;
-  status: PaymentStatus;
+  status: "Menunggu Pembayaran" | "Sudah Dibayar" | "Gagal";
   dueDate?: string;
-  invoiceId?: string;
-  paymentDate?: string; // Jika sudah dibayar
+  paymentDate?: string;
+  invoiceId: string;
 }
 
-type TransactionStatus = "Berhasil" | "Diproses" | "Gagal";
 interface Transaction {
   id: string;
   date: string;
   description: string;
   paymentMethod: string;
-  status: TransactionStatus;
+  status: "Berhasil" | "Diproses" | "Gagal";
   amount: number;
   currency: string;
   invoiceUrl?: string;
 }
 
-interface PaymentItem {
-  id: string;
-  name: string;
-  price: number;
-  currency: string;
+interface PaymentData {
+  currentBill: CurrentBillSummary | null;
+  paymentHistory: Transaction[];
 }
 
-// --- Placeholder Data ---
-const currentBill: CurrentBillSummary | null = {
-  totalAmount: 250000,
-  currency: "IDR",
-  status: "Menunggu Pembayaran",
-  dueDate: "2025-06-05",
-  invoiceId: "INV-2025-00123",
-};
-// Untuk simulasi sudah dibayar:
-// const currentBill: CurrentBillSummary | null = { totalAmount: 0, currency: "IDR", status: "Sudah Dibayar", paymentDate: "2025-05-25", invoiceId: "INV-2025-00122"};
-// Untuk simulasi gagal:
-// const currentBill: CurrentBillSummary | null = { totalAmount: 150000, currency: "IDR", status: "Gagal", invoiceId: "INV-2025-00121", paymentDate: "2025-05-20"};
-
-
-const paymentHistory: Transaction[] = [
-  { 
-    id: "txn001", 
-    date: "2024-03-20", 
-    description: "Kursus: UI/UX Design Masterclass", 
-    paymentMethod: "Kartu Kredit (**** 5678)", 
-    status: "Berhasil", 
-    amount: 799000, 
-    currency: "IDR", 
-    invoiceUrl: "#" 
-  },
-  { 
-    id: "txn002", 
-    date: "2024-03-15", 
-    description: "Langganan Premium - 3 Bulan", 
-    paymentMethod: "DANA", 
-    status: "Berhasil", 
-    amount: 450000, 
-    currency: "IDR", 
-    invoiceUrl: "#" 
-  },
-  { 
-    id: "txn003", 
-    date: "2024-03-10", 
-    description: "Workshop: React Native Development", 
-    paymentMethod: "Bank Transfer (BCA)", 
-    status: "Diproses", 
-    amount: 1250000, 
-    currency: "IDR" 
-  },
-  { 
-    id: "txn004", 
-    date: "2024-03-05", 
-    description: "Kursus: Digital Marketing Strategy", 
-    paymentMethod: "OVO", 
-    status: "Gagal", 
-    amount: 599000, 
-    currency: "IDR" 
-  },
-  { 
-    id: "txn005", 
-    date: "2024-02-28", 
-    description: "Bootcamp: Full Stack Development", 
-    paymentMethod: "Kartu Kredit (**** 1234)", 
-    status: "Berhasil", 
-    amount: 2499000, 
-    currency: "IDR", 
-    invoiceUrl: "#" 
-  },
-  { 
-    id: "txn006", 
-    date: "2024-02-20", 
-    description: "Kursus: Data Science Fundamentals", 
-    paymentMethod: "GoPay", 
-    status: "Berhasil", 
-    amount: 899000, 
-    currency: "IDR", 
-    invoiceUrl: "#" 
-  },
-  { 
-    id: "txn007", 
-    date: "2024-02-15", 
-    description: "Workshop: AWS Cloud Architecture", 
-    paymentMethod: "Virtual Account (Mandiri)", 
-    status: "Diproses", 
-    amount: 1750000, 
-    currency: "IDR" 
-  },
-  { 
-    id: "txn008", 
-    date: "2024-02-10", 
-    description: "Langganan Premium - 1 Tahun", 
-    paymentMethod: "Bank Transfer (BNI)", 
-    status: "Berhasil", 
-    amount: 1499000, 
-    currency: "IDR", 
-    invoiceUrl: "#" 
-  }
-];
-
-const itemsToPay: PaymentItem[] = currentBill && currentBill.status === "Menunggu Pembayaran"
-  ? [{ id: "bill001", name: `Tagihan Invoice #${currentBill.invoiceId}`, price: currentBill.totalAmount, currency: currentBill.currency }]
-  : [];
-// Atau bisa juga dari item kursus yang baru ditambahkan ke keranjang:
-// const itemsToPay: PaymentItem[] = [
-//   { id: "course001", name: "Kursus: Figma Masterclass", price: 450000, currency: "IDR" },
-//   { id: "course002", name: "Kursus: Copywriting Essentials", price: 200000, currency: "IDR" },
-// ];
-
-
-const paymentMethods = ["Kartu Kredit/Debit", "Virtual Account", "GoPay", "OVO", "Bank Transfer"];
-
 // --- Helper Functions & Components ---
-const getStatusPillClasses = (status: PaymentStatus | TransactionStatus): string => {
+const getStatusPillClasses = (status: string): string => {
   switch (status) {
     case "Sudah Dibayar":
     case "Berhasil":
@@ -170,7 +59,7 @@ const getStatusPillClasses = (status: PaymentStatus | TransactionStatus): string
   }
 };
 
-const StatusIcon = ({ status }: { status: PaymentStatus | TransactionStatus }) => {
+const StatusIcon = ({ status }: { status: string }) => {
   switch (status) {
     case "Sudah Dibayar":
     case "Berhasil":
@@ -185,251 +74,310 @@ const StatusIcon = ({ status }: { status: PaymentStatus | TransactionStatus }) =
   }
 };
 
-export default function PaymentPage() {
-  const [showPromo, setShowPromo] = useState(true);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(paymentMethods[0]);
+// --- API Functions ---
+const fetchPaymentData = async (userId: string): Promise<PaymentData> => {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/payments/${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
-  // States for filtering history
-  const [historySearchTerm, setHistorySearchTerm] = useState("");
-  const [historyStatusFilter, setHistoryStatusFilter] = useState<TransactionStatus | "Semua">("Semua");
-  // const [historyDateRange, setHistoryDateRange] = useState<[Date | null, Date | null]>([null, null]); // Untuk date picker
+    if (response.ok) {
+      return await response.json();
+    } else {
+      return {
+        currentBill: null,
+        paymentHistory: []
+      };
+    }
+  } catch (error) {
+    console.error('Payment API error:', error);
+    return {
+      currentBill: null,
+      paymentHistory: []
+    };
+  }
+};
+
+// --- Main Component ---
+export default function PaymentsPage() {
+  const { user } = useAuth();
+  const [paymentData, setPaymentData] = useState<PaymentData>({
+    currentBill: null,
+    paymentHistory: []
+  });
+  const [loading, setLoading] = useState(true);
+  const [showPromo, setShowPromo] = useState(true);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("Kartu Kredit/Debit");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("Semua");
+
+  useEffect(() => {
+    const loadPaymentData = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const data = await fetchPaymentData(user.id?.toString() || '');
+        setPaymentData(data);
+      } catch (error) {
+        console.error('Error loading payment data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPaymentData();
+  }, [user]);
+
+  const { currentBill, paymentHistory } = paymentData;
 
   const totalAmountToPay = useMemo(() => {
-    return itemsToPay.reduce((sum, item) => sum + item.price, 0);
-  }, [itemsToPay]);
+    return currentBill?.totalAmount || 0;
+  }, [currentBill]);
 
   const filteredHistory = useMemo(() => {
     return paymentHistory
       .filter(transaction =>
-        transaction.description.toLowerCase().includes(historySearchTerm.toLowerCase())
+        transaction.description.toLowerCase().includes(searchTerm.toLowerCase())
       )
       .filter(transaction =>
-        historyStatusFilter === "Semua" || transaction.status === historyStatusFilter
+        statusFilter === "Semua" || transaction.status === statusFilter
       );
-    // Tambahkan filter tanggal jika menggunakan date picker
-  }, [paymentHistory, historySearchTerm, historyStatusFilter]);
+  }, [paymentHistory, searchTerm, statusFilter]);
 
   const handlePayNow = () => {
     // Simulasi proses pembayaran
-    console.log(`Membayar ${totalAmountToPay.toLocaleString('id-ID')} ${itemsToPay[0]?.currency || 'IDR'} menggunakan ${selectedPaymentMethod}`);
-    alert(`Simulasi: Pembayaran sebesar ${totalAmountToPay.toLocaleString('id-ID')} ${itemsToPay[0]?.currency || 'IDR'} dengan ${selectedPaymentMethod} sedang diproses.`);
+    console.log(`Membayar ${totalAmountToPay.toLocaleString('id-ID')} ${currentBill?.currency || 'IDR'} menggunakan ${selectedPaymentMethod}`);
+    alert(`Simulasi: Pembayaran sebesar ${totalAmountToPay.toLocaleString('id-ID')} ${currentBill?.currency || 'IDR'} dengan ${selectedPaymentMethod} sedang diproses.`);
     // Idealnya, ini akan redirect ke payment gateway atau memicu API call
   };
 
-  return (
-    <div className="space-y-10 p-4 sm:p-6 lg:p-8 text-text-light-primary dark:text-text-dark-primary">
-      <header className="mb-8">
-        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-gray-900 dark:text-neutral-100">
-          Pembayaran & Tagihan
-        </h1>
-        <p className="mt-2 text-md text-gray-600 dark:text-neutral-400 max-w-2xl">
-          Kelola tagihan Anda, lakukan pembayaran, dan lihat riwayat transaksi dengan mudah.
-        </p>
-      </header>
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 lg:px-8 py-8 lg:py-12 animate-pulse">
+        <div className="h-8 bg-gray-200 dark:bg-neutral-700 rounded w-1/3 mb-6"></div>
+        <div className="space-y-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-48 bg-gray-200 dark:bg-neutral-700 rounded-2xl"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
-      {/* Optional: Promo Banner */}
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 lg:px-8 py-8 lg:py-12">
+        <div className="text-center py-12">
+          <p className="text-lg text-neutral-600 dark:text-neutral-400">
+            Silakan login untuk mengakses halaman pembayaran.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 lg:px-8 py-8 lg:py-12 space-y-10 text-text-light-primary dark:text-text-dark-primary">
+      <div className="text-center lg:text-left">
+        <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          Pembayaran & Riwayat Transaksi
+        </h1>
+        <p className="text-gray-600 dark:text-neutral-400 text-lg">
+          Kelola pembayaran dan lihat riwayat transaksi Anda
+        </p>
+      </div>
+
+      {/* Promo Banner */}
       {showPromo && (
-        <div className="relative bg-gradient-to-r from-brand-purple to-purple-600 dark:from-purple-700 dark:to-purple-800 text-white p-5 rounded-xl shadow-lg flex items-center justify-between transition-all duration-300">
-          <div className="flex items-center">
-            <ReceiptPercentIcon className="h-8 w-8 mr-3 flex-shrink-0" />
-            <div>
-              <h3 className="font-semibold text-lg">Promo Spesial Akhir Bulan!</h3>
-              <p className="text-sm opacity-90">Langganan paket tahunan dan dapatkan diskon 25% + akses ke kursus premium gratis!</p>
-            </div>
-          </div>
+        <div className="relative bg-gradient-to-r from-brand-purple to-purple-700 p-6 rounded-2xl text-white shadow-xl">
           <button
             onClick={() => setShowPromo(false)}
-            className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
-            aria-label="Tutup promo"
+            className="absolute top-3 right-3 text-white/80 hover:text-white"
           >
-            <XMarkIcon className="h-5 w-5" />
+            <XMarkIcon className="h-6 w-6" />
           </button>
+          <div className="flex items-center">
+            <CreditCardIcon className="h-8 w-8 mr-4" />
+            <div>
+              <h3 className="text-lg font-semibold">Promo Pembayaran!</h3>
+              <p className="text-white/90">Dapatkan cashback 10% untuk semua metode pembayaran digital. Berlaku hingga akhir bulan.</p>
+            </div>
+          </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* Kolom Kiri: Ringkasan Tagihan & Form Pembayaran (jika ada tagihan) */}
-        <div className="lg:col-span-1 space-y-8">
-          {/* Payment Summary Card */}
-          {currentBill && (
-            <div className={`p-6 rounded-2xl shadow-xl border-2 transition-all duration-300
-              ${currentBill.status === "Sudah Dibayar" ? 'bg-green-50 dark:bg-green-900/40 border-green-500 dark:border-green-600' :
-                currentBill.status === "Menunggu Pembayaran" ? 'bg-yellow-50 dark:bg-yellow-900/40 border-yellow-500 dark:border-yellow-600 animate-pulseSlow' :
-                'bg-red-50 dark:bg-red-900/40 border-red-500 dark:border-red-600'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-neutral-100">Ringkasan Tagihan</h2>
-                <StatusIcon status={currentBill.status} />
-              </div>
-              <p className={`text-sm font-medium px-3 py-1 rounded-full inline-block mb-4 ${getStatusPillClasses(currentBill.status)}`}>
-                {currentBill.status}
+      {/* Current Bill Summary */}
+      {currentBill && (
+        <div className="p-6 bg-white dark:bg-neutral-800/90 rounded-2xl shadow-xl border border-gray-200 dark:border-neutral-700/80">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-neutral-100 mb-4 flex items-center">
+            <CreditCardIcon className="h-6 w-6 mr-3 text-brand-purple" />
+            Tagihan Saat Ini
+          </h2>
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-neutral-400">Invoice #{currentBill.invoiceId}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                {currentBill.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: currentBill.currency, minimumFractionDigits: 0 })}
               </p>
-              {currentBill.status !== "Sudah Dibayar" && (
-                <p className="text-3xl font-bold text-gray-900 dark:text-neutral-50 mb-1">
-                  {currentBill.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: currentBill.currency, minimumFractionDigits: 0 })}
+              {currentBill.dueDate && (
+                <p className="text-sm text-gray-600 dark:text-neutral-400">
+                  Jatuh tempo: {new Date(currentBill.dueDate).toLocaleDateString('id-ID')}
                 </p>
               )}
-              {currentBill.status === "Menunggu Pembayaran" && currentBill.dueDate && (
-                <p className="text-xs text-yellow-700 dark:text-yellow-300">Jatuh tempo: {new Date(currentBill.dueDate).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-              )}
-              {currentBill.status === "Sudah Dibayar" && currentBill.paymentDate && (
-                 <p className="text-sm text-green-700 dark:text-green-300">Dibayar pada: {new Date(currentBill.paymentDate).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-              )}
-              {currentBill.invoiceId && <p className="text-xs text-gray-500 dark:text-neutral-400 mt-1">No. Invoice: {currentBill.invoiceId}</p>}
-
-              {currentBill.status === "Gagal" && (
-                <p className="text-sm text-red-700 dark:text-red-300 mt-2">Pembayaran terakhir gagal. Silakan coba lagi atau gunakan metode lain.</p>
-              )}
             </div>
-          )}
+            <div className="text-right">
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusPillClasses(currentBill.status)}`}>
+                <StatusIcon status={currentBill.status} />
+                <span className="ml-2">{currentBill.status}</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
-          {/* Form Pembayaran Baru (jika ada item yang akan dibayar) */}
-          {itemsToPay.length > 0 && (
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          {/* Form Pembayaran Baru (jika ada tagihan) */}
+          {currentBill && currentBill.status === "Menunggu Pembayaran" && (
             <div className="p-6 bg-white dark:bg-neutral-800/90 rounded-2xl shadow-xl border border-gray-200 dark:border-neutral-700/80">
               <h2 className="text-xl font-semibold text-gray-800 dark:text-neutral-100 mb-5">Lakukan Pembayaran</h2>
               <div className="space-y-3 mb-5">
-                {itemsToPay.map(item => (
-                  <div key={item.id} className="flex justify-between items-center text-sm p-3 bg-gray-50 dark:bg-neutral-700/50 rounded-lg">
-                    <span className="text-gray-700 dark:text-neutral-200 flex items-center"><TagIcon className="h-4 w-4 mr-2 text-gray-400"/>{item.name}</span>
-                    <span className="font-semibold text-gray-800 dark:text-neutral-100">{item.price.toLocaleString('id-ID', { style: 'currency', currency: item.currency, minimumFractionDigits: 0 })}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mb-5 pt-3 border-t border-gray-200 dark:border-neutral-700/60">
+                <div className="flex justify-between items-center text-sm p-3 bg-gray-50 dark:bg-neutral-700/50 rounded-lg">
+                  <span className="text-gray-700 dark:text-neutral-200 flex items-center">
+                    <TagIcon className="h-4 w-4 mr-2 text-gray-400"/>
+                    Invoice #{currentBill.invoiceId}
+                  </span>
+                  <span className="font-semibold text-gray-800 dark:text-neutral-100">
+                    {currentBill.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: currentBill.currency, minimumFractionDigits: 0 })}
+                  </span>
+                </div>
+                <hr className="border-gray-200 dark:border-neutral-700" />
                 <div className="flex justify-between items-center font-bold text-lg">
                   <span className="text-gray-800 dark:text-neutral-100">Total Bayar:</span>
-                  <span className="text-brand-purple dark:text-purple-400">{totalAmountToPay.toLocaleString('id-ID', { style: 'currency', currency: itemsToPay[0]?.currency || 'IDR', minimumFractionDigits: 0 })}</span>
+                  <span className="text-brand-purple dark:text-purple-400">
+                    {totalAmountToPay.toLocaleString('id-ID', { style: 'currency', currency: currentBill.currency, minimumFractionDigits: 0 })}
+                  </span>
                 </div>
               </div>
-              <div className="mb-5">
-                <label htmlFor="paymentMethod" className="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-1.5">Pilih Metode Pembayaran</label>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-3">Pilih Metode Pembayaran</label>
                 <div className="relative">
                   <CreditCardIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-neutral-500 pointer-events-none" />
                   <select
-                    id="paymentMethod"
                     value={selectedPaymentMethod}
                     onChange={(e) => setSelectedPaymentMethod(e.target.value)}
                     className="w-full appearance-none pl-10 pr-8 py-3 rounded-lg border border-gray-300 dark:border-neutral-600/80 bg-white dark:bg-neutral-700 text-sm focus:ring-2 focus:ring-brand-purple dark:focus:ring-purple-500 focus:border-transparent"
                   >
-                    {paymentMethods.map(method => (
-                      <option key={method} value={method}>{method}</option>
-                    ))}
+                    <option value="Kartu Kredit/Debit">Kartu Kredit/Debit</option>
+                    <option value="Virtual Account">Virtual Account</option>
+                    <option value="GoPay">GoPay</option>
+                    <option value="OVO">OVO</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
                   </select>
                   <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-neutral-500 pointer-events-none" />
                 </div>
               </div>
+
               <button
                 onClick={handlePayNow}
-                disabled={totalAmountToPay === 0}
-                className="w-full bg-brand-purple hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-500 text-white font-semibold py-3.5 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:focus:ring-offset-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-brand-purple hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:focus:ring-offset-neutral-800"
               >
                 Bayar Sekarang
               </button>
             </div>
           )}
-        </div>
 
-        {/* Kolom Kanan: Riwayat Pembayaran */}
-        <div className="lg:col-span-2 h-full bg-white dark:bg-neutral-800/90 p-6 rounded-2xl shadow-xl border border-gray-200 dark:border-neutral-700/80">
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-neutral-100 mb-6">Riwayat Pembayaran</h2>
-          {/* Filter Riwayat */}
-          <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-            <div className="relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-neutral-500 pointer-events-none" />
-              <input
-                type="search"
-                placeholder="Cari deskripsi..."
-                value={historySearchTerm}
-                onChange={(e) => setHistorySearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 dark:border-neutral-600/80 bg-white dark:bg-neutral-700 text-sm focus:ring-1 focus:ring-brand-purple dark:focus:ring-purple-500"
-              />
-            </div>
-            <div className="relative">
-               <AdjustmentsHorizontalIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-neutral-500 pointer-events-none" />
-              <select
-                value={historyStatusFilter}
-                onChange={(e) => setHistoryStatusFilter(e.target.value as TransactionStatus | "Semua")}
-                className="w-full appearance-none pl-10 pr-8 py-2.5 rounded-lg border border-gray-300 dark:border-neutral-600/80 bg-white dark:bg-neutral-700 text-sm focus:ring-1 focus:ring-brand-purple dark:focus:ring-purple-500"
+          {/* Riwayat Transaksi */}
+          <div className="p-6 bg-white dark:bg-neutral-800/90 rounded-2xl shadow-xl border border-gray-200 dark:border-neutral-700/80">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-neutral-100 mb-4 sm:mb-0">Riwayat Transaksi</h2>
+              <button
+                onClick={() => window.location.reload()}
+                className="flex items-center text-brand-purple hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-medium"
               >
-                <option value="Semua">Semua Status</option>
-                <option value="Berhasil">Berhasil</option>
-                <option value="Diproses">Diproses</option>
-                <option value="Gagal">Gagal</option>
-              </select>
-              <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-neutral-500 pointer-events-none" />
+                <ArrowPathIcon className="h-5 w-5 mr-2" />
+                Refresh
+              </button>
             </div>
-            {/* Tambahkan Date Range Picker di sini jika perlu */}
-          </div>
 
-          {/* Tabel Riwayat */}
-          <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-neutral-700/60">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-neutral-700/60">
-              <thead className="bg-gray-50 dark:bg-neutral-700/50">
-                <tr>
-                  <th scope="col" className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-neutral-300 uppercase tracking-wider">Tanggal</th>
-                  <th scope="col" className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-neutral-300 uppercase tracking-wider">Deskripsi</th>
-                  <th scope="col" className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-neutral-300 uppercase tracking-wider">Metode</th>
-                  <th scope="col" className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 dark:text-neutral-300 uppercase tracking-wider">Status</th>
-                  <th scope="col" className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 dark:text-neutral-300 uppercase tracking-wider">Jumlah</th>
-                  <th scope="col" className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 dark:text-neutral-300 uppercase tracking-wider">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-neutral-800 divide-y divide-gray-200 dark:divide-neutral-700/60">
-                {filteredHistory.length > 0 ? filteredHistory.map((transaction) => (
-                  <tr key={transaction.id} className="hover:bg-gray-50/50 dark:hover:bg-neutral-700/40 transition-colors">
-                    <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-neutral-300">{new Date(transaction.date).toLocaleDateString('id-ID', {day: '2-digit', month: 'short', year: 'numeric'})}</td>
-                    <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-neutral-100 font-medium">{transaction.description}</td>
-                    <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-neutral-300">{transaction.paymentMethod}</td>
-                    <td className="px-5 py-4 whitespace-nowrap text-sm text-center">
-                      <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusPillClasses(transaction.status)}`}>
-                        {transaction.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 whitespace-nowrap text-sm text-right text-gray-800 dark:text-neutral-100 font-semibold">{transaction.amount.toLocaleString('id-ID', { style: 'currency', currency: transaction.currency, minimumFractionDigits: 0 })}</td>
-                    <td className="px-5 py-4 whitespace-nowrap text-sm text-center">
-                      {transaction.invoiceUrl ? (
-                        <a href={transaction.invoiceUrl} target="_blank" rel="noopener noreferrer" className="text-brand-purple dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium p-1 rounded-md hover:bg-purple-50 dark:hover:bg-purple-700/30 transition-colors" title="Unduh Invoice">
-                          <ArrowDownTrayIcon className="h-5 w-5 inline-block" />
-                        </a>
-                      ) : (
-                        <span className="text-gray-400 dark:text-neutral-500 p-1 cursor-not-allowed" title="Invoice tidak tersedia">
-                            <ArrowDownTrayIcon className="h-5 w-5 inline-block opacity-50" />
+            {/* Filter & Search */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="relative flex-1">
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-neutral-500 pointer-events-none" />
+                <input
+                  type="search"
+                  placeholder="Cari deskripsi..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 dark:border-neutral-600/80 bg-white dark:bg-neutral-700 text-sm focus:ring-1 focus:ring-brand-purple dark:focus:ring-purple-500"
+                />
+              </div>
+              <div className="relative sm:w-48">
+                <AdjustmentsHorizontalIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-neutral-500 pointer-events-none" />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full appearance-none pl-10 pr-8 py-2.5 rounded-lg border border-gray-300 dark:border-neutral-600/80 bg-white dark:bg-neutral-700 text-sm focus:ring-1 focus:ring-brand-purple dark:focus:ring-purple-500"
+                >
+                  <option value="Semua">Semua Status</option>
+                  <option value="Berhasil">Berhasil</option>
+                  <option value="Diproses">Diproses</option>
+                  <option value="Gagal">Gagal</option>
+                </select>
+                <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-neutral-500 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Transaction List */}
+            <div className="space-y-3">
+              {filteredHistory.length > 0 ? (
+                filteredHistory.map((transaction) => (
+                  <div key={transaction.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-neutral-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700/70 transition-colors">
+                    <div className="flex-1 mb-3 sm:mb-0">
+                      <div className="flex items-center mb-2">
+                        <StatusIcon status={transaction.status} />
+                        <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${getStatusPillClasses(transaction.status)}`}>
+                          {transaction.status}
                         </span>
-                      )}
-                    </td>
-                  </tr>
-                )) : (
-                    <tr>
-                        <td colSpan={6} className="px-5 py-10 text-center text-sm text-gray-500 dark:text-neutral-400">
-                            <InformationCircleIcon className="h-12 w-12 mx-auto text-gray-300 dark:text-neutral-600 mb-2"/>
-                            Tidak ada riwayat transaksi yang cocok dengan filter Anda.
-                        </td>
-                    </tr>
-                )}
-              </tbody>
-            </table>
+                      </div>
+                      <h4 className="font-medium text-gray-800 dark:text-neutral-100 text-sm">{transaction.description}</h4>
+                      <p className="text-xs text-gray-500 dark:text-neutral-400">{transaction.paymentMethod} • {transaction.date}</p>
+                    </div>
+                    <div className="flex items-center justify-between sm:justify-end">
+                      <span className="font-semibold text-gray-800 dark:text-neutral-100 text-sm mr-4">
+                        {transaction.amount.toLocaleString('id-ID', { style: 'currency', currency: transaction.currency, minimumFractionDigits: 0 })}
+                      </span>
+                      <div className="flex items-center space-x-2">
+                        {transaction.invoiceUrl ? (
+                          <a href={transaction.invoiceUrl} target="_blank" rel="noopener noreferrer" className="text-brand-purple dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium p-1 rounded-md hover:bg-purple-50 dark:hover:bg-purple-700/30 transition-colors" title="Unduh Invoice">
+                            <DocumentArrowDownIcon className="h-5 w-5 inline-block" />
+                          </a>
+                        ) : (
+                          <span className="text-gray-400 dark:text-neutral-500 p-1 cursor-not-allowed" title="Invoice tidak tersedia">
+                            <DocumentArrowDownIcon className="h-5 w-5 inline-block opacity-50" />
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 dark:text-neutral-400">Tidak ada transaksi yang ditemukan.</p>
+                </div>
+              )}
+            </div>
           </div>
-          {/* Tambahkan pagination jika perlu */}
         </div>
       </div>
     </div>
   );
 }
-
-// Untuk animasi pulse pada summary card yang menunggu pembayaran, tambahkan ke globals.css jika belum:
-/*
-@layer utilities {
-  .animate-pulseSlow {
-    animation: pulseSlow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-  @keyframes pulseSlow {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: .8;
-    }
-  }
-}
-*/

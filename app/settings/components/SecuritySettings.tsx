@@ -1,7 +1,7 @@
 // 5. app/dashboard/settings/components/SecuritySettings.tsx
 // Path: app/dashboard/settings/components/SecuritySettings.tsx
 "use client";
-import React, { useState, ChangeEvent } from 'react';
+import React, { useState, ChangeEvent, useEffect } from 'react';
 import { ShieldCheckIcon, EyeIcon, EyeSlashIcon, DevicePhoneMobileIcon, ClockIcon as HistoryIcon } from '@heroicons/react/24/solid';
 
 interface AceternityInputProps {
@@ -74,13 +74,36 @@ export default function SecuritySettings() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [is2FAEnabled, setIs2FAEnabled] = useState(false); // Dummy state
+  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+  const [loginActivityData, setLoginActivityData] = useState<LoginActivity[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const loginActivityData: LoginActivity[] = [
-    { id: "la1", device: "Chrome on Windows 11", ipAddress: "103.22.XX.XX", location: "Jakarta, Indonesia", timestamp: "28 Mei 2025, 10:00 WIB", isCurrent: true },
-    { id: "la2", device: "Safari on iPhone 15 Pro", ipAddress: "103.22.XX.YY", location: "Bandung, Indonesia", timestamp: "27 Mei 2025, 18:30 WIB" },
-    { id: "la3", device: "Firefox on Ubuntu", ipAddress: "103.22.XX.ZZ", location: "Surabaya, Indonesia", timestamp: "25 Mei 2025, 08:15 WIB" },
-  ];
+  useEffect(() => {
+    const fetchSecurityData = async () => {
+      try {
+        setLoading(true);
+        // Fetch 2FA status and login activity from API
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/security`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setIs2FAEnabled(data.is2FAEnabled || false);
+          setLoginActivityData(data.loginActivity || []);
+        }
+      } catch (error) {
+        console.error('Error fetching security data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSecurityData();
+  }, []);
 
   const handleChangePassword = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,10 +120,42 @@ export default function SecuritySettings() {
     setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
   };
 
-  const handleToggle2FA = () => {
-    setIs2FAEnabled(!is2FAEnabled);
-    alert(`Simulasi: Autentikasi Dua Faktor ${!is2FAEnabled ? 'diaktifkan' : 'dinonaktifkan'}.`);
+  const handleToggle2FA = async () => {
+    try {
+      const newStatus = !is2FAEnabled;
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/security/2fa`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ enabled: newStatus })
+      });
+
+      if (response.ok) {
+        setIs2FAEnabled(newStatus);
+        alert(`Autentikasi Dua Faktor ${newStatus ? 'diaktifkan' : 'dinonaktifkan'}.`);
+      } else {
+        alert('Gagal mengubah pengaturan 2FA. Silakan coba lagi.');
+      }
+    } catch (error) {
+      console.error('Error toggling 2FA:', error);
+      alert('Terjadi kesalahan. Silakan coba lagi.');
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="bg-white dark:bg-neutral-800/90 p-6 sm:p-10 rounded-2xl shadow-2xl border border-gray-200 dark:border-neutral-700/70 animate-pulse">
+        <div className="h-8 bg-gray-200 dark:bg-neutral-700 rounded w-1/3 mb-6"></div>
+        <div className="space-y-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-24 bg-gray-200 dark:bg-neutral-700 rounded-lg"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white dark:bg-neutral-800/90 p-6 sm:p-10 rounded-2xl shadow-2xl border border-gray-200 dark:border-neutral-700/70 space-y-10">

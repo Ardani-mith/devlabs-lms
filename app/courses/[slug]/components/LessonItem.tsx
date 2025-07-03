@@ -52,9 +52,9 @@ export default function LessonItem({ lesson, courseSlug }: LessonItemProps) {
 
   const lessonLink =
     lesson.status !== "terkunci"
-      ? lesson.url.startsWith("#")
+      ? lesson.url && lesson.url.startsWith("#")
         ? `#${courseSlug}${lesson.url}`
-        : lesson.url
+        : lesson.url || "#"
       : "#";
 
   const isLocked = lesson.status === "terkunci";

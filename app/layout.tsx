@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { CourseProvider } from "@/contexts/CourseContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,7 +21,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} bg-gray-50 dark:bg-neutral-900`} suppressHydrationWarning>
         <AuthProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <CourseProvider>
+            <ThemeProvider>{children}</ThemeProvider>
+          </CourseProvider>
         </AuthProvider>
       </body>
     </html>

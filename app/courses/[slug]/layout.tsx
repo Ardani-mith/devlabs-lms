@@ -1,9 +1,9 @@
 import { ReactNode } from "react";
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
-    // Di sini Anda bisa fetch data kursus berdasarkan params.slug
-    // Untuk contoh, kita buat judul dari slug
-    const courseTitle = params.slug
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+
+    const { slug } = await params;
+    const courseTitle = slug
       .split('-')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
