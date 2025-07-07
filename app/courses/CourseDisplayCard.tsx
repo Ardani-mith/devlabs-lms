@@ -1,19 +1,20 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  BookOpenIcon, // General course icon
-  ClockIcon,    // For duration
-  UserCircleIcon, // For instructor
-  StarIcon,     // For rating
+  BookOpenIcon,
+  ClockIcon,
+  UserCircleIcon,
+  StarIcon,
 } from "@heroicons/react/24/solid";
 import { getProperThumbnailUrl } from "@/lib/utils/youtube";
 
 export interface CourseDetails {
   id: string;
+  slug: string;
   title: string;
   thumbnailUrl: string;
   instructorName: string;
-  instructorAvatarUrl?: string; // Optional
+  instructorAvatarUrl?: string;
   category: string;
   lessonsCount: number;
   totalDurationHours: number;
@@ -21,9 +22,9 @@ export interface CourseDetails {
   rating?: number;
   studentsEnrolled?: number;
   price?: number | "Gratis";
-  courseUrl?: string; // Make this optional
   isNew?: boolean;
   tags?: string[];
+  loading?: boolean;
 }
 
 interface CourseDisplayCardProps {
@@ -37,8 +38,28 @@ export function CourseDisplayCard({ course }: CourseDisplayCardProps) {
     course.level === "Lanjutan" ? "bg-red-100 dark:bg-red-700/30 text-red-700 dark:text-red-300" :
     "bg-blue-100 dark:bg-blue-700/30 text-blue-700 dark:text-blue-300";
 
-  // Generate course URL dynamically if not provided
-  const courseHref = course.courseUrl || `/courses/${course.id}`;
+  const courseHref = `/courses/${course.slug}`;
+
+  if (course.loading) {
+    return (
+      <div className="relative flex flex-col bg-white dark:bg-transparent border border-gray-200 dark:border-transparent rounded-xl shadow-lg overflow-hidden h-full animate-pulse">
+        <div className="relative w-full h-48 sm:h-52 bg-gray-200 dark:bg-neutral-700"></div>
+        <div className="p-5 flex-grow flex flex-col space-y-3">
+          <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-1/4"></div>
+          <div className="h-6 bg-gray-200 dark:bg-neutral-700 rounded w-3/4"></div>
+          <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-1/2"></div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded"></div>
+            <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded"></div>
+          </div>
+          <div className="mt-auto pt-3 flex justify-between items-center border-t border-gray-200 dark:border-neutral-700/60">
+            <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-1/4"></div>
+            <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-1/4"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Link href={courseHref} className="group block">
@@ -49,13 +70,14 @@ export function CourseDisplayCard({ course }: CourseDisplayCardProps) {
             alt={course.title}
             layout="fill"
             className="object-cover group-hover:scale-100 transition-transform duration-500 ease-in-out"
+            priority={course.isNew}
           />
           {course.isNew && (
             <span className="absolute top-3 right-3 bg-red-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full shadow-md animate-pulse">
               BARU
             </span>
           )}
-           <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 via-black/40 to-transparent">
+          <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 via-black/40 to-transparent">
             <span className={`text-xs font-semibold px-2 py-1 rounded-full ${levelColor} shadow-sm`}>
               {course.level}
             </span>

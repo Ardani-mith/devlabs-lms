@@ -262,10 +262,31 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
     setError(null);
 
     try {
+      // Filter only allowed fields for update based on UpdateCourseDto
+      const allowedFields = {
+        title: courseData.title,
+        description: courseData.description,
+        thumbnailUrl: courseData.thumbnailUrl,
+        category: courseData.category,
+        level: courseData.level,
+        price: courseData.price,
+        published: courseData.published,
+        tags: courseData.tags,
+        // YouTube related fields (now allowed in UpdateCourseDto)
+        youtubeEmbedUrl: courseData.youtubeEmbedUrl,
+        youtubeVideoId: courseData.youtubeVideoId,
+        youtubeThumbnailUrl: courseData.youtubeThumbnailUrl,
+      };
+
+      // Remove undefined fields to avoid sending unnecessary data
+      const updateData = Object.fromEntries(
+        Object.entries(allowedFields).filter(([, value]) => value !== undefined)
+      );
+
       const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
-        body: JSON.stringify(courseData)
+        body: JSON.stringify(updateData)
       });
 
       if (!response.ok) {
