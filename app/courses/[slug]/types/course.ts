@@ -57,8 +57,11 @@ export interface CourseDetail {
   isEnrolled: boolean;
   lastAccessedLessonUrl?: string;
   lastAccessedLessonTitle?: string;
-  price?: number;
+  price: number;
   originalPrice?: number;
+  isPremium?: boolean;
+  isOnSale?: boolean;
+  saleEndDate?: string;
   fullDescription: string;
   whatYouWillLearn: string[];
   targetAudience: string[];
@@ -87,4 +90,5 @@ export interface CourseDetail {
     | "category"
     | "price"
   >[];
+  enrollmentTrend?: { date: string; count: number }[];
 } 
