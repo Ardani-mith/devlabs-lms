@@ -2,57 +2,92 @@
  * YouTube URL utility functions
  */
 
+// Base64 encoded placeholder image (1x1 pixel transparent PNG)
+const PLACEHOLDER_IMAGE = '/images/course-placeholder.svg';
+
 /**
- * Extract video ID from various YouTube URL formats
+ * Extract YouTube video ID from various URL formats
  */
 export function extractYouTubeVideoId(url: string): string | null {
   if (!url) return null;
 
-  // Handle different YouTube URL formats
-  const patterns = [
-    // youtu.be/VIDEO_ID
-    /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-    // youtube.com/watch?v=VIDEO_ID
-    /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/,
-    // youtube.com/embed/VIDEO_ID
-    /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
-    // youtube.com/v/VIDEO_ID
-    /(?:youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match && match[1]) {
-      return match[1];
+  try {
+    const urlObj = new URL(url);
+    
+    // Handle youtube.com URLs
+    if (urlObj.hostname.includes('youtube.com')) {
+      // Regular watch URLs
+      if (urlObj.pathname === '/watch') {
+        return urlObj.searchParams.get('v');
+      }
+      // Shortened /v/ URLs
+      if (urlObj.pathname.startsWith('/v/')) {
+        return urlObj.pathname.split('/')[2];
+      }
+      // Embed URLs
+      if (urlObj.pathname.startsWith('/embed/')) {
+        return urlObj.pathname.split('/')[2];
+      }
     }
+    
+    // Handle youtu.be URLs
+    if (urlObj.hostname === 'youtu.be') {
+      return urlObj.pathname.slice(1);
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error parsing YouTube URL:', error);
+    return null;
   }
-
-  return null;
 }
 
 /**
- * Get YouTube thumbnail URL from video ID
+ * Get YouTube embed URL from video ID
  */
-export function getYouTubeThumbnailUrl(videoId: string, quality: 'default' | 'medium' | 'high' | 'standard' | 'maxres' = 'maxres'): string {
+export function getYouTubeEmbedUrl(videoId: string | null): string {
+  if (!videoId) return '';
+  return `https://www.youtube.com/embed/${videoId}`;
+}
+
+/**
+ * Get YouTube thumbnail URL with fallback quality options
+ */
+export function getYouTubeThumbnail(videoId: string | null, quality: 'default' | 'hq' | 'mq' | 'sd' | 'maxres' = 'hq'): string {
+  if (!videoId) return PLACEHOLDER_IMAGE;
+
   const qualityMap = {
-    default: 'default.jpg',
-    medium: 'mqdefault.jpg', 
-    high: 'hqdefault.jpg',
-    standard: 'sddefault.jpg',
-    maxres: 'maxresdefault.jpg'
+    default: '',
+    mq: 'mq',
+    hq: 'hq',
+    sd: 'sd',
+    maxres: 'maxresdefault'
   };
 
-  return `https://img.youtube.com/vi/${videoId}/${qualityMap[quality] || qualityMap.maxres}`;
+  const suffix = qualityMap[quality] ? `${qualityMap[quality]}.jpg` : 'default.jpg';
+  return `https://img.youtube.com/vi/${videoId}/${suffix}`;
 }
 
 /**
- * Convert any YouTube URL to proper thumbnail URL
+ * Validate YouTube URL and extract video ID
  */
-export function convertYouTubeUrlToThumbnail(url: string, quality: 'default' | 'medium' | 'high' | 'standard' | 'maxres' = 'maxres'): string | null {
-  const videoId = extractYouTubeVideoId(url);
-  if (!videoId) return null;
-  
-  return getYouTubeThumbnailUrl(videoId, quality);
+export function validateYouTubeUrl(url: string): { isValid: boolean; videoId?: string; error?: string } {
+  if (!url) {
+    return { isValid: false, error: 'URL is required' };
+  }
+
+  try {
+    const videoId = extractYouTubeVideoId(url);
+    
+    if (!videoId) {
+      return { isValid: false, error: 'Invalid YouTube URL format' };
+    }
+
+    return { isValid: true, videoId };
+  } catch (error) {
+    console.error('Error validating YouTube URL:', error);
+    return { isValid: false, error: 'Invalid URL format' };
+  }
 }
 
 /**
@@ -69,6 +104,9 @@ export function isYouTubeUrl(url: string): boolean {
  */
 export function isValidImageUrl(url: string): boolean {
   if (!url) return false;
+
+  // If it's a data URL, consider it valid
+  if (url.startsWith('data:image/')) return true;
   
   // Check for common image extensions
   const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)(\?.*)?$/i;
@@ -84,7 +122,8 @@ export function isValidImageUrl(url: string): boolean {
     'images.pexels.com',
     'via.placeholder.com',
     'picsum.photos',
-    'ui-avatars.com'
+    'ui-avatars.com',
+    'i.pravatar.cc'
   ];
   
   try {
@@ -99,61 +138,57 @@ export function isValidImageUrl(url: string): boolean {
  * Check if URL looks like a non-image URL (login, API endpoints, etc.)
  */
 export function isNonImageUrl(url: string): boolean {
-  if (!url) return false;
-  
-  // Check for common non-image paths
   const nonImagePaths = [
-    '/login', '/api/', '/auth/', '/admin/', '/dashboard/',
-    '.html', '.php', '.aspx', '.jsp', '/logout', '/signin',
-    '/signup', '/register', '/profile', '/settings'
+    'youtube.com/watch',
+    'youtu.be/',
+    'youtube.com/embed/',
+    'youtube.com/v/'
   ];
   
   return nonImagePaths.some(path => url.toLowerCase().includes(path));
 }
 
 /**
+ * Convert any YouTube URL to proper thumbnail URL
+ */
+export function convertYouTubeUrlToThumbnail(url: string): string {
+  const videoId = extractYouTubeVideoId(url);
+  if (!videoId) return PLACEHOLDER_IMAGE;
+  
+  // This function now correctly uses getYouTubeThumbnail
+  return getYouTubeThumbnail(videoId, 'hq');
+}
+
+/**
  * Get proper thumbnail URL from any URL (handles YouTube conversion)
+ * This is the main, more comprehensive function.
  */
 export function getProperThumbnailUrl(url: string, fallbackUrl?: string): string {
-  const defaultFallback = fallbackUrl || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=600&fit=crop';
-  
   if (!url) {
-    return defaultFallback;
+    return fallbackUrl || PLACEHOLDER_IMAGE;
   }
 
-  // If it's clearly not an image URL (like login pages, API endpoints), return fallback
-  if (isNonImageUrl(url)) {
-    console.warn(`Non-image URL detected: ${url}, using fallback`);
-    return defaultFallback;
+  // If it's a data URL, return it as is
+  if (url.startsWith('data:image/')) {
+    return url;
   }
 
   // If it's a YouTube URL, convert to thumbnail
   if (isYouTubeUrl(url)) {
-    const thumbnailUrl = convertYouTubeUrlToThumbnail(url);
-    if (thumbnailUrl) {
-      return thumbnailUrl;
-    }
+    return convertYouTubeUrlToThumbnail(url) || fallbackUrl || PLACEHOLDER_IMAGE;
   }
 
   // If it's a valid image URL, return it
   if (isValidImageUrl(url)) {
     return url;
   }
-
-  // For any other case, try to determine if it's safe to use
-  try {
-    const urlObj = new URL(url);
-    // If it has a suspicious path or no image extension, use fallback
-    if (isNonImageUrl(urlObj.pathname) || urlObj.pathname === '/') {
-      console.warn(`Suspicious URL detected: ${url}, using fallback`);
-      return defaultFallback;
-    }
-    
-    // Otherwise, assume it's an image URL and let it try
-    return url;
-  } catch {
-    // If URL parsing fails, use fallback
-    console.warn(`Invalid URL detected: ${url}, using fallback`);
-    return defaultFallback;
+  
+  // If it's clearly not an image URL (like login pages, API endpoints), return fallback
+  // This check can be combined or placed before isValidImageUrl if needed
+  if (isNonImageUrl(url)) {
+    return fallbackUrl || PLACEHOLDER_IMAGE;
   }
-} 
+
+  // For any other case, return the fallback
+  return fallbackUrl || PLACEHOLDER_IMAGE;
+}

@@ -1,7 +1,3 @@
-//---------------------------------------------------------------------
-// FILE 2 (UPDATED): app/settings/components/AccountInformation.tsx
-// Path: app/dashboard/settings/components/AccountInformation.tsx
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -128,8 +124,7 @@ export default function AccountInformation() {
       const token = localStorage.getItem('accessToken');
       if (!token) throw new Error("Token autentikasi tidak ditemukan.");
 
-      // 1. Kirim data ke backend
-      const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/profile/me`, {
+      const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/users/profile/me`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(profileDataToSubmit),
@@ -141,21 +136,14 @@ export default function AccountInformation() {
       }
       const updatedProfileFromBackend = await profileResponse.json();
 
-      // 2. (Opsional) Update UI secara optimistik dengan data dari form
-      //    Ini akan membuat UI terasa lebih cepat.
       if (typeof updateUserContext === 'function') {
         updateUserContext({
-            name: formData.name,
-            username: formData.username,
-            bio: formData.bio,
-            department: formData.department,
-            avatarUrl: formData.avatarPreview || user.avatarUrl,
+            name: updatedProfileFromBackend.name,
+            username: updatedProfileFromBackend.username,
+            bio: updatedProfileFromBackend.bio,
+            department: updatedProfileFromBackend.department,
+            avatarUrl: formData.avatarPreview || updatedProfileFromBackend.avatarUrl,
         });
-      }
-
-      // 3. Refresh data dari backend untuk memastikan konsistensi
-      if (typeof refreshUserProfile === 'function') {
-        await refreshUserProfile(token);
       }
       
       setSaveStatus("success");
@@ -245,7 +233,7 @@ export default function AccountInformation() {
             <label htmlFor="bio" className="block text-sm font-semibold text-gray-700 dark:text-neutral-300 mb-1.5">Bio Singkat</label>
             <textarea name="bio" id="bio" rows={4} value={formData.bio} onChange={handleChange} disabled={!isEditing} className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700/60 text-sm focus:ring-2 focus:ring-brand-purple dark:focus:ring-purple-500 focus:border-transparent shadow-sm transition-colors min-h-[100px] placeholder-neutral-400 dark:placeholder-neutral-500 text-neutral-900 dark:text-neutral-100" placeholder="Ceritakan sedikit tentang diri Anda..."/>
           </div>
-           <div className="md:col-span-2"> <InputField label="Peran" id="role" name="role" value={user.role || ''} onChange={() => {}} disabled={true}/> </div>
+           <div className="md:col-span-2"> <InputField label="Role" id="role" name="role" value={user.role || ''} onChange={() => {}} disabled={true}/> </div>
         </div>
       </form>
     </div>

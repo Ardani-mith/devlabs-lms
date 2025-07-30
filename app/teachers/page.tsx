@@ -18,34 +18,12 @@ function TeacherDirectoryView() {
   useEffect(() => {
     const fetchTeachers = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/users?role=TEACHER`, {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (response.ok) {
-          const apiTeachers = await response.json();
-          
-          // Transform API data to match TeacherProfile interface
-          const transformedTeachers: TeacherProfile[] = apiTeachers.map((teacher: any) => ({
-            id: teacher.id?.toString() || '',
-            name: teacher.name || 'Unknown Teacher',
-            avatarUrl: teacher.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
-            expertiseAreas: teacher.expertiseAreas || ['General'],
-            shortBio: teacher.bio || 'Experienced educator',
-            coursesCount: teacher.coursesCount || 0,
-            lessonsCount: teacher.lessonsCount || 0,
-            rating: teacher.rating || 4.5,
-            isVerified: teacher.isVerified || false,
-            profileUrl: `/teachers/${teacher.id}`,
-          }));
-
-          setTeachers(transformedTeachers);
-        } else {
-          // If API fails, use empty array
-          setTeachers([]);
-        }
+        // Use mock service instead of API
+        const mockTeachers = await import('@/lib/services/mockService').then(
+          ({ MockServices }) => MockServices.teacher.getTeachers()
+        );
+        
+        setTeachers(mockTeachers);
       } catch (error) {
         console.error('Error fetching teachers:', error);
         setTeachers([]);

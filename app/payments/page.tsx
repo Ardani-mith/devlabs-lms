@@ -77,21 +77,9 @@ const StatusIcon = ({ status }: { status: string }) => {
 // --- API Functions ---
 const fetchPaymentData = async (userId: string): Promise<PaymentData> => {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/payments/${userId}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (response.ok) {
-      return await response.json();
-    } else {
-      return {
-        currentBill: null,
-        paymentHistory: []
-      };
-    }
+    // Use mock service instead of API
+    const { MockServices } = await import('@/lib/services/mockService');
+    return await MockServices.payment.getPaymentData(parseInt(userId));
   } catch (error) {
     console.error('Payment API error:', error);
     return {

@@ -56,40 +56,27 @@ interface APISupportResponse {
 // API function to fetch support data
 const fetchSupportData = async (): Promise<SupportData> => {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/support`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (response.ok) {
-      const data: APISupportResponse = await response.json();
+    // Use mock service instead of API
+    const { MockServices } = await import('@/lib/services/mockService');
+    const data: APISupportResponse = await MockServices.support.getSupportData();
       
-      // Map icons for categories
-      const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-        'account': AcademicCapIcon,
-        'payment': CreditCardIcon,
-        'course': BookOpenIcon,
-        'technical': WrenchScrewdriverIcon,
-      };
+    // Map icons for categories
+    const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+      'account': AcademicCapIcon,
+      'payment': CreditCardIcon,
+      'course': BookOpenIcon,
+      'technical': WrenchScrewdriverIcon,
+    };
 
-      const categoriesWithIcons = data.categories.map((cat: APICategoryData) => ({
-        ...cat,
-        icon: iconMap[cat.iconType] || QuestionMarkCircleIcon
-      }));
+    const categoriesWithIcons = data.categories.map((cat: APICategoryData) => ({
+      ...cat,
+      icon: iconMap[cat.iconType] || QuestionMarkCircleIcon
+    }));
 
-      return {
-        categories: categoriesWithIcons,
-        faqs: data.faqs || []
-      };
-    } else {
-      // Return default data if API fails
-      return {
-        categories: [],
-        faqs: []
-      };
-    }
+    return {
+      categories: categoriesWithIcons,
+      faqs: data.faqs || []
+    };
   } catch (error) {
     console.error('Support API error:', error);
     return {

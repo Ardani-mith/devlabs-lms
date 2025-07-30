@@ -1,9 +1,9 @@
 // app/dashboard/page.tsx
 "use client";
 
-import React, { useState, useEffect } from 'react'; // Menambahkan useEffect
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import Link from 'next/link'; // Menambahkan impor Link
+import Link from 'next/link';
 import {
   BellIcon, BookOpenIcon, CalendarDaysIcon, CheckCircleIcon, ChevronRightIcon,
   ClockIcon, DocumentCheckIcon, FireIcon,
@@ -12,7 +12,9 @@ import {
   CurrencyDollarIcon
 } from '@heroicons/react/24/outline';
 import { BackgroundGradient } from '@/components/ui/background-gradient';
-import { useAuth } from '@/contexts/AuthContext'; // <<< 1. Impor useAuth
+import { useAuth } from '@/contexts/AuthContext';
+import { AuthGuard } from '@/components/shared/AuthGuard';
+import { StatCardData } from '@/lib/types';
 import { ChartBarIcon, UsersIcon } from 'lucide-react';
 
 // --- Placeholder Data (Data ini bisa Anda pindahkan atau sesuaikan nanti) ---
@@ -106,14 +108,23 @@ const SectionItemCard = ({ children, className }: { children: React.ReactNode, c
 type UserRole = 'ADMIN' | 'TEACHER' | 'USER';
 
 export default function DashboardPage() {
-  const { user, isLoading: isAuthLoading } = useAuth(); // <<< 2. Dapatkan user dan status loading
+  const { user, isLoading: isAuthLoading } = useAuth();
   const [currentNewsPage, setCurrentNewsPage] = useState(0);
   const newsPerPage = 3;
 
   // State untuk data dinamis yang mungkin berbeda per peran
-  const [userSpecificSummary, setUserSpecificSummary] = useState<Array<{title: string, value: string, icon: React.ElementType, color: string, bgColor: string}>>([]);
+  const [userSpecificSummary, setUserSpecificSummary] = useState<StatCardData[]>([]);
   const [userOverallProgress, setUserOverallProgress] = useState(0);
   const [userQuickAccessLinks, setUserQuickAccessLinks] = useState<Array<{title: string, icon: React.ElementType, href: string}>>([]);
+
+  // Debug logs (hanya di development dan sekali saja)
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && user) {
+      console.log("User object:", user);
+      console.log("Display Name:", user.name || user.username);
+      console.log("Display Role:", user.role);
+    }
+  }, [user?.id]); // Only log when user ID changes
 
   useEffect(() => {
     if (user) {
@@ -147,7 +158,7 @@ export default function DashboardPage() {
         ]);
       }
     }
-  }, [user]); // Jalankan efek ketika objek user berubah
+  }, [user]);
 
   if (isAuthLoading) {
     // Tampilkan skeleton loader atau pesan loading saat data auth dimuat
@@ -164,16 +175,14 @@ export default function DashboardPage() {
   }
 
   if (!user) {
-    // Jika tidak ada user setelah loading selesai (misal, token tidak valid atau belum login)
-    // Idealnya, ini akan di-handle oleh HOC atau middleware yang me-redirect ke /login
     return (
-        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
-            <p className="text-lg text-neutral-600 dark:text-neutral-400">Silakan login untuk mengakses dashboard.</p>
-            <Link href="/auth/login" className="mt-4 px-6 py-2 bg-brand-purple text-white rounded-lg hover:bg-purple-700">
-                Ke Halaman Login
-            </Link>
-        </div>
-    );
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
+          <p className="text-lg text-neutral-600 dark:text-neutral-400">Silakan login untuk mengakses dashboard.</p>
+          <Link href="/" className="mt-4 px-6 py-2 bg-brand-purple text-white rounded-lg hover:bg-purple-700">
+              Ke Halaman Login
+          </Link>
+      </div>
+  );
   }
 
   // Data pengguna sekarang berasal dari context
@@ -181,7 +190,8 @@ export default function DashboardPage() {
   const displayRole = user.role;
 
   return (
-    <div className="space-y-12 p-4 sm:p-6 lg:p-8 text-text-light-primary dark:text-text-dark-primary">
+    <AuthGuard requireAuth={true}>
+      <div className="space-y-12 p-4 sm:p-6 lg:p-8 text-text-light-primary dark:text-text-dark-primary">
       {/* Welcome Section */}
       <section>
         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight dark:text-neutral-100">Selamat Datang Kembali, <span className="text-brand-purple dark:text-purple-400">{displayName}</span>!</h1>
@@ -382,5 +392,6 @@ export default function DashboardPage() {
          )}
       </section>
     </div>
+    </AuthGuard>
   );
 }

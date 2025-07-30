@@ -39,21 +39,9 @@ interface MessageData {
 // API function to fetch message data
 const fetchMessageData = async (userId: string): Promise<MessageData> => {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/messages/${userId}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (response.ok) {
-      return await response.json();
-    } else {
-      return {
-        contacts: [],
-        messages: []
-      };
-    }
+    // Use mock service instead of API
+    const { MockServices } = await import('@/lib/services/mockService');
+    return await MockServices.message.getMessages(parseInt(userId));
   } catch (error) {
     console.error('Messages API error:', error);
     return {

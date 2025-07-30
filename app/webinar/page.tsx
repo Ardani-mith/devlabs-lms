@@ -34,22 +34,9 @@ interface WebinarData {
 // API function to fetch webinar data
 const fetchWebinarData = async (): Promise<WebinarData> => {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/webinars`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (response.ok) {
-      return await response.json();
-    } else {
-      // Return empty data if API fails
-      return {
-        webinars: [],
-        categories: ["Semua Kategori"]
-      };
-    }
+    // Use mock service instead of API
+    const { MockServices } = await import('@/lib/services/mockService');
+    return await MockServices.webinar.getWebinars();
   } catch (error) {
     console.error('Webinar API error:', error);
     return {

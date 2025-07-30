@@ -1,103 +1,260 @@
-import Image from "next/image";
+// Path: app/login/page.tsx (atau app/auth/login/page.tsx)
 
-export default function Home() {
+"use client";
+
+import React, { useState, FormEvent } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation'; // Gunakan dari next/navigation untuk App Router
+import { ArrowRightIcon, LockClosedIcon, UserIcon as AtSymbolIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/solid';
+import { FcGoogle } from 'react-icons/fc'; // Contoh ikon Google dari react-icons
+import { FaMicrosoft } from 'react-icons/fa'; // Contoh ikon Microsoft dari react-icons
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { AuthGuard } from '@/components/shared/AuthGuard';
+
+// Placeholder untuk komponen Input dan Button dari Aceternity UI
+// Anda perlu mengimpornya dari path yang benar jika sudah ada di proyek Anda
+// import { Input } from "@/components/ui/aceternity/input"; // Contoh path
+// import { Button } from "@/components/ui/aceternity/button"; // Contoh path
+
+// Komponen Input dan Button Placeholder (Ganti dengan komponen Aceternity UI asli)
+const AceternityInput = ({ id, name, type, value, onChange, placeholder, icon, required, className }: any) => (
+  <div className="relative">
+    {icon && <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">{icon}</div>}
+    <input
+      id={id}
+      name={name}
+      type={type}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      required={required}
+      className={`w-full px-4 py-3.5 rounded-xl border bg-white dark:bg-neutral-800/70 text-sm 
+                  ${icon ? 'pl-11' : 'pl-4'} 
+                  border-neutral-300 dark:border-neutral-700 
+                  focus:ring-2 focus:ring-brand-purple dark:focus:ring-purple-500 focus:border-transparent 
+                  placeholder-neutral-400 dark:placeholder-neutral-500 
+                  text-neutral-900 dark:text-neutral-100 
+                  transition-shadow duration-200 focus:shadow-md ${className}`}
+    />
+  </div>
+);
+
+const AceternityButton = ({ children, type = "submit", onClick, disabled, className, isLoading }: any) => (
+  <button
+    type={type}
+    onClick={onClick}
+    disabled={disabled || isLoading}
+    className={`w-full flex items-center justify-center px-6 py-3.5 border border-transparent 
+                text-sm font-semibold rounded-xl shadow-sm text-white 
+                bg-gradient-to-r from-brand-purple to-purple-600 hover:from-purple-600 hover:to-purple-700 
+                dark:from-purple-600 dark:to-purple-700 dark:hover:from-purple-700 dark:hover:to-purple-800
+                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 
+                dark:focus:ring-offset-neutral-900
+                transition-all duration-300 ease-in-out transform hover:scale-105
+                disabled:opacity-60 disabled:cursor-not-allowed ${className}`}
+  >
+    {isLoading ? (
+      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+    ) : children}
+  </button>
+);
+// --- Akhir Placeholder ---
+
+
+export default function LoginPage() {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { loginWithCredentials } = useAuth(); // Use loginWithCredentials method
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsLoading(true);
+    setError(null);
+  
+    console.log('🚀 Login attempt:', { username, password: '***' });
+  
+    try {
+      // Use the AuthContext loginWithCredentials method
+      const result = await loginWithCredentials(username, password);
+      
+      console.log('📝 Login result:', result);
+      
+      if (result.success) {
+        console.log('✅ Login successful, redirecting to dashboard...');
+        router.push('/dashboard');
+      } else {
+        console.log('❌ Login failed:', result.error);
+        setError(result.error || 'Login failed');
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+      console.log('💥 Login exception:', errorMessage);
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <AuthGuard requireAuth={false}>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-100 via-gray-100 to-stone-200 dark:from-neutral-900 dark:via-neutral-800 dark:to-black p-4 sm:p-6 lg:p-8 selection:bg-purple-500 selection:text-white">
+      <div className="w-full max-w-md space-y-8">
+        {/* Card Login Utama */}
+        <div className="bg-white dark:bg-neutral-800/80 backdrop-blur-md p-8 sm:p-10 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-700/70">
+          <div className="text-center mb-8">
+            {/* Logo LMS Anda bisa ditempatkan di sini */}
+            {/* <Image src="/logo-lms.svg" alt="LMS Logo" width={150} height={50} className="mx-auto mb-4" /> */}
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-50">
+              Selamat Datang Kembali!
+            </h1>
+            <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+              Masuk untuk melanjutkan perjalanan belajar Anda.
+            </p>
+          </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <AceternityInput
+                id="username"
+                name="username"
+                type="text"
+                value={username}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
+                placeholder="Username Anda"
+                icon={<AtSymbolIcon className="h-5 w-5 text-neutral-400 dark:text-neutral-500" />}
+                required
+              />
+            </div>
+
+            <div className="relative">
+              <AceternityInput
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                placeholder="Kata Sandi"
+                icon={<LockClosedIcon className="h-5 w-5 text-neutral-400 dark:text-neutral-500" />}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-sm leading-5 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+                aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+              >
+                {showPassword ? (
+                  <EyeSlashIcon className="h-5 w-5" />
+                ) : (
+                  <EyeIcon className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+
+            {error && (
+              <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 p-3 rounded-md text-center border border-red-200 dark:border-red-800">
+                <strong>Error:</strong> {error}
+              </div>
+            )}
+
+            {/* Test Credentials Panel untuk Development */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
+                <h4 className="text-xs font-medium text-blue-800 dark:text-blue-300 mb-2">Test Credentials:</h4>
+                <div className="space-y-1 text-xs text-blue-700 dark:text-blue-400">
+                  <button 
+                    type="button"
+                    onClick={() => { setUsername('dani'); setPassword('123'); }}
+                    className="block w-full text-left p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30"
+                  >
+                    Admin: dani / 123
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => { setUsername('testuser'); setPassword('password123'); }}
+                    className="block w-full text-left p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-800/30"
+                  >
+                    User: testuser / password123
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end">
+              <div className="text-sm">
+                <Link href="/auth/forgot-password" // Sesuaikan path jika perlu
+                      className="font-medium text-brand-purple hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 transition-colors">
+                  Lupa password?
+                </Link>
+              </div>
+            </div>
+
+            <div>
+              <AceternityButton type="submit" isLoading={isLoading} className="w-full group">
+                {isLoading ? 'Memproses...' : (
+                  <>
+                    Masuk ke Akun Saya
+                    <ArrowRightIcon className="h-5 w-5 ml-2 transform transition-transform duration-300 group-hover:translate-x-1" />
+                  </>
+                )}
+              </AceternityButton>
+            </div>
+          </form>
+
+          {/* Opsi Login Lain (Opsional) */}
+          <div className="mt-8">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-neutral-300 dark:border-neutral-700" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400">
+                  Atau masuk dengan
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <button
+                  type="button"
+                  onClick={() => alert("Simulasi: Login dengan Google")}
+                  className="w-full inline-flex justify-center py-3 px-4 border border-neutral-300 dark:border-neutral-700 rounded-xl shadow-sm bg-white dark:bg-neutral-700/50 text-sm font-medium text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-600/70 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-purple dark:focus:ring-offset-neutral-900"
+                >
+                  <FcGoogle className="h-5 w-5 mr-2" aria-hidden="true" />
+                  Google
+                </button>
+              </div>
+              <div>
+                 <button
+                  type="button"
+                  onClick={() => alert("Simulasi: Login dengan Microsoft")}
+                  className="w-full inline-flex justify-center py-3 px-4 border border-neutral-300 dark:border-neutral-700 rounded-xl shadow-sm bg-white dark:bg-neutral-700/50 text-sm font-medium text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-600/70 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-purple dark:focus:ring-offset-neutral-900"
+                >
+                  <FaMicrosoft className="h-5 w-5 mr-2 text-[#0078D4]" aria-hidden="true" />
+                  Microsoft
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        <p className="mt-8 text-center text-sm text-neutral-600 dark:text-neutral-400">
+          Belum punya akun?{' '}
+          <Link href="/auth/register" // Sesuaikan path jika perlu
+                className="font-medium text-brand-purple hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 transition-colors">
+            Daftar Sekarang
+          </Link>
+        </p>
+      </div>
     </div>
+    </AuthGuard>
   );
 }

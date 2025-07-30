@@ -1,3 +1,5 @@
+"use client";
+
 // Contoh di halaman /dashboard/courses/manage/page.tsx
 import { useAuth } from '@/contexts/AuthContext';
 

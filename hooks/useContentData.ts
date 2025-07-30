@@ -59,7 +59,7 @@ export function useContentData({
     return params.toString();
   }, [pageSize]);
 
-  // Fetch data function
+  // Fetch data function using mock service
   const fetchData = useCallback(async (filtersToUse: ContentFilters, page: number = 1, append: boolean = false) => {
     if (!endpoint) return;
 
@@ -67,24 +67,10 @@ export function useContentData({
     setError(null);
 
     try {
-      const queryString = buildQueryString(filtersToUse, page);
-      const url = `${process.env.NEXT_PUBLIC_API_URL}${endpoint}?${queryString}`;
-      
-      const response = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-          // Add auth header if needed
-          ...(typeof window !== 'undefined' && localStorage.getItem('token') && {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }),
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result: ContentResponse = await response.json();
+      // Use mock service instead of real API
+      const result: ContentResponse = await import('@/lib/services/mockService').then(
+        ({ MockServices }) => MockServices.content.getContent(endpoint, filtersToUse)
+      );
       
       setData(prevData => {
         if (append && prevData) {

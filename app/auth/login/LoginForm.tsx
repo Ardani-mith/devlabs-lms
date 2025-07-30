@@ -3,35 +3,31 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface FormData {
-  email: string;
+  username: string;
   password: string;
 }
 
 interface FormErrors {
-  email?: string;
+  username?: string;
   password?: string;
 }
 
 export default function LoginForm() {
+  const { loginWithCredentials } = useAuth();
   const [formData, setFormData] = useState<FormData>({
-    email: '',
+    username: '',
     password: '',
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
-    
-    // Email validation
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(formData.email)) {
-      newErrors.email = 'Invalid email address';
-    }
 
     // Password validation
     if (!formData.password) {
@@ -46,15 +42,23 @@ export default function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setIsLoading(true);
+    setErrors({});
     try {
-      // TODO: Implement actual login logic here
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulated API call
-      console.log('Login successful', formData);
+      const result = await loginWithCredentials(formData.username, formData.password);
+
+      if (!result.success) {
+        setErrors({ username: result.error || 'Login gagal', password: undefined });
+        return;
+      }
+
+      // Redirect atau aksi lain jika login sukses
+      // Misal: router.push('/dashboard');
     } catch (error) {
+      setErrors({ username: 'Terjadi kesalahan server', password: undefined });
       console.error('Login failed:', error);
     } finally {
       setIsLoading(false);
@@ -64,7 +68,6 @@ export default function LoginForm() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    // Clear error when user starts typing
     if (errors[name as keyof FormErrors]) {
       setErrors(prev => ({ ...prev, [name]: undefined }));
     }
@@ -73,28 +76,28 @@ export default function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
-        {/* Email Input */}
+        {/* username Input */}
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Mail className="h-5 w-5 text-gray-400" />
           </div>
           <input
-            type="email"
-            name="email"
-            value={formData.email}
+            type="username"
+            name="username"
+            value={formData.username}
             onChange={handleChange}
             className={`block w-full pl-10 pr-3 py-3 border ${
-              errors.email ? 'border-red-300' : 'border-gray-300'
+              errors.username ? 'border-red-300' : 'border-gray-300'
             } rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200`}
-            placeholder="Email address"
+            placeholder="username address"
           />
-          {errors.email && (
+          {errors.username && (
             <motion.p
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               className="mt-1 text-sm text-red-600"
             >
-              {errors.email}
+              {errors.username}
             </motion.p>
           )}
         </div>
@@ -158,4 +161,4 @@ export default function LoginForm() {
       </motion.button>
     </form>
   );
-} 
+};

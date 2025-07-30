@@ -2,41 +2,11 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { useAuth } from './AuthContext';
-import { getProperThumbnailUrl } from '@/lib/utils/youtube';
+import { MockServices } from '@/lib/services/mockService';
+import { MockCourse } from '@/lib/data/mockData';
 
-// Types
-interface ApiCourseResponse {
-  id: number;
-  title: string;
-  description: string;
-  thumbnailUrl?: string;
-  instructorId: number;
-  instructor?: {
-    name: string;
-    avatarUrl?: string;
-  };
-  category: string;
-  level: string;
-  price: number;
-  published: boolean;
-  rating?: number;
-  lessonsCount?: number;
-  totalDurationHours?: number;
-  isNew?: boolean;
-  tags?: string[];
-  slug: string;
-  youtubeEmbedUrl?: string;
-  youtubeVideoId?: string;
-  youtubeThumbnailUrl?: string;
-  createdAt: string;
-  updatedAt: string;
-  _count?: {
-    enrollments: number;
-    modules: number;
-  };
-}
-
-interface Course {
+// Frontend Course interface (transformed from MockCourse)
+export interface Course {
   id: string;
   title: string;
   description: string;
@@ -56,20 +26,20 @@ interface Course {
   isNew?: boolean;
   tags: string[];
   slug: string;
-  youtubeEmbedUrl?: string;
-  youtubeVideoId?: string;
-  youtubeThumbnailUrl?: string;
+  youtubeEmbedUrl: string;
+  youtubeVideoId: string;
+  youtubeThumbnailUrl: string;
   createdAt: string;
   updatedAt: string;
 }
 
-interface CourseFormData {
+export interface CourseFormData {
   title: string;
   description: string;
   thumbnailUrl: string;
-  youtubeEmbedUrl?: string;
-  youtubeVideoId?: string;
-  youtubeThumbnailUrl?: string;
+  youtubeEmbedUrl: string;
+  youtubeVideoId: string;
+  youtubeThumbnailUrl: string;
   category: string;
   level: "Pemula" | "Menengah" | "Lanjutan";
   price: number;
@@ -80,18 +50,13 @@ interface CourseFormData {
 }
 
 interface CourseContextType {
-  // State
   courses: Course[];
   loading: boolean;
   error: string | null;
-  
-  // Actions
   fetchCourses: () => Promise<void>;
   createCourse: (courseData: CourseFormData) => Promise<Course | null>;
   updateCourse: (id: string, courseData: Partial<CourseFormData>) => Promise<Course | null>;
   deleteCourse: (id: string) => Promise<boolean>;
-  
-  // Utils
   getCoursesByInstructor: (instructorId: string) => Course[];
   getPublishedCourses: () => Course[];
   refreshCourses: () => void;
@@ -103,102 +68,117 @@ interface CourseProviderProps {
   children: ReactNode;
 }
 
+const DEFAULT_THUMBNAIL = '/images/course-placeholder.svg';
+const DEFAULT_AVATAR = '/images/avatar-placeholder.svg';
+
 export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // Use ref to store latest fetchCourses function for auto-refresh
   const fetchCoursesRef = useRef<(() => Promise<void>) | null>(null);
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300';
+  // Transform MockCourse to frontend Course interface with error handling
+  const transformMockCourse = useCallback((mockCourse: MockCourse): Course => {
+    try {
+      // Ensure required fields have default values
+      const transformedCourse: Course = {
+        id: (mockCourse.id || Date.now()).toString(),
+        title: mockCourse.title || 'Untitled Course',
+        description: mockCourse.description || 'No description available',
+        thumbnailUrl: mockCourse.thumbnailUrl || DEFAULT_THUMBNAIL,
+        instructorName: mockCourse.instructor?.name || 'Unknown Instructor',
+        instructorAvatarUrl: mockCourse.instructor?.avatarUrl || DEFAULT_AVATAR,
+        instructorId: (mockCourse.instructorId || 0).toString(),
+        category: mockCourse.category || 'Uncategorized',
+        level: (mockCourse.level as Course['level']) || "Pemula",
+        price: mockCourse.price === 0 ? "Gratis" : (mockCourse.price || 0),
+        published: Boolean(mockCourse.published),
+        rating: mockCourse.rating || 0,
+        studentsEnrolled: mockCourse.studentsEnrolled || 0,
+        lessonsCount: mockCourse.lessonsCount || 0,
+        totalDurationHours: mockCourse.totalDurationHours || 0,
+        courseUrl: `/courses/${mockCourse.slug || mockCourse.id}`,
+        isNew: Boolean(mockCourse.isNew),
+        tags: Array.isArray(mockCourse.tags) ? mockCourse.tags : [],
+        slug: mockCourse.slug || mockCourse.id.toString(),
+        youtubeEmbedUrl: mockCourse.youtubeEmbedUrl || '',
+        youtubeVideoId: mockCourse.youtubeVideoId || '',
+        youtubeThumbnailUrl: mockCourse.youtubeThumbnailUrl || '',
+        createdAt: mockCourse.createdAt || new Date().toISOString(),
+        updatedAt: mockCourse.updatedAt || new Date().toISOString(),
+      };
 
-  // Helper function to get auth headers
-  const getAuthHeaders = useCallback(() => {
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': token ? `Bearer ${token}` : ''
-    };
-  }, [token]);
-
-  // Transform API response to match frontend Course interface
-  const transformApiCourse = (apiCourse: ApiCourseResponse): Course => {
-    // Debug logging for problematic thumbnailUrl
-    if (apiCourse.thumbnailUrl && apiCourse.thumbnailUrl.includes('login')) {
-      console.warn('⚠️ Suspicious thumbnailUrl detected in course:', {
-        courseId: apiCourse.id,
-        title: apiCourse.title,
-        thumbnailUrl: apiCourse.thumbnailUrl
-      });
+      return transformedCourse;
+    } catch (error) {
+      console.error('Error transforming course:', error);
+      // Return a safe default course object
+      return {
+        id: Date.now().toString(),
+        title: 'Error Loading Course',
+        description: 'There was an error loading this course.',
+        thumbnailUrl: DEFAULT_THUMBNAIL,
+        instructorName: 'Unknown',
+        instructorId: '0',
+        category: 'Uncategorized',
+        level: "Pemula",
+        price: 0,
+        published: false,
+        studentsEnrolled: 0,
+        lessonsCount: 0,
+        totalDurationHours: 0,
+        tags: [],
+        slug: 'error',
+        youtubeEmbedUrl: '',
+        youtubeVideoId: '',
+        youtubeThumbnailUrl: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
     }
+  }, []);
 
-    return {
-      id: apiCourse.id?.toString() || '',
-      title: apiCourse.title || '',
-      description: apiCourse.description || '',
-      thumbnailUrl: getProperThumbnailUrl(apiCourse.thumbnailUrl || ''),
-      instructorName: apiCourse.instructor?.name || 'Unknown',
-      instructorAvatarUrl: apiCourse.instructor?.avatarUrl,
-      instructorId: apiCourse.instructorId?.toString() || '',
-      category: apiCourse.category || 'Web Development',
-             level: (apiCourse.level as "Pemula" | "Menengah" | "Lanjutan") || 'Pemula',
-      price: apiCourse.price || 0,
-      published: apiCourse.published || false,
-      rating: apiCourse.rating,
-      studentsEnrolled: apiCourse._count?.enrollments || 0,
-      lessonsCount: apiCourse._count?.modules || apiCourse.lessonsCount || 0,
-      totalDurationHours: apiCourse.totalDurationHours || 1,
-      courseUrl: `/courses/${apiCourse.slug}`,
-      isNew: apiCourse.isNew || false,
-      tags: apiCourse.tags || [],
-      slug: apiCourse.slug || '',
-      youtubeEmbedUrl: apiCourse.youtubeEmbedUrl,
-      youtubeVideoId: apiCourse.youtubeVideoId,
-      youtubeThumbnailUrl: apiCourse.youtubeThumbnailUrl,
-      createdAt: apiCourse.createdAt || new Date().toISOString(),
-      updatedAt: apiCourse.updatedAt || new Date().toISOString(),
-    };
-  };
-
-  // Fetch all courses
+  // Fetch all courses using mock service with better error handling
   const fetchCourses = useCallback(async () => {
-    // Prevent multiple concurrent fetches
-    setLoading(prevLoading => {
-      if (prevLoading) return prevLoading; // Already loading, don't start another
-      return true;
-    });
+    if (loading) return;
     
+    setLoading(true);
     setError(null);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/courses`, {
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch courses');
+      const mockCourses = await MockServices.course.getCourses();
+      if (!Array.isArray(mockCourses)) {
+        throw new Error('Invalid course data received');
       }
-
-      const apiCourses = await response.json();
-      const transformedCourses = apiCourses.map(transformApiCourse);
+      
+      const transformedCourses = mockCourses
+        .map(transformMockCourse)
+        .filter(course => course !== null);
       
       setCourses(transformedCourses);
     } catch (error) {
       console.error('Error fetching courses:', error);
       setError(error instanceof Error ? error.message : 'Failed to fetch courses');
+      // Set empty courses array on error to prevent UI from breaking
+      setCourses([]);
     } finally {
       setLoading(false);
     }
-  }, [API_BASE_URL, getAuthHeaders]); // Removed 'loading' dependency
+  }, [transformMockCourse]);
 
   // Update ref with latest fetchCourses
   fetchCoursesRef.current = fetchCourses;
 
-  // Create new course
+  // Create new course with validation
   const createCourse = useCallback(async (courseData: CourseFormData): Promise<Course | null> => {
-    if (!user || !token) {
+    if (!user) {
       setError('User not authenticated');
+      return null;
+    }
+
+    // Validate required fields
+    if (!courseData.title || !courseData.description) {
+      setError('Title and description are required');
       return null;
     }
 
@@ -206,42 +186,22 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
     setError(null);
 
     try {
-      // Prepare data for API
-      const apiData = {
-        title: courseData.title,
-        description: courseData.description,
-        thumbnailUrl: courseData.youtubeThumbnailUrl || courseData.thumbnailUrl,
-        youtubeEmbedUrl: courseData.youtubeEmbedUrl,
-        youtubeVideoId: courseData.youtubeVideoId,
-        youtubeThumbnailUrl: courseData.youtubeThumbnailUrl,
-        category: courseData.category,
-        level: courseData.level,
-        price: courseData.price,
-        published: courseData.published,
-        tags: courseData.tags,
-        lessonsCount: courseData.lessonsCount,
-        totalDurationHours: courseData.totalDurationHours,
-        isNew: true
+      const mockCourseData = {
+        ...courseData,
+        instructorId: user.id,
+        instructorName: user.name || 'Unknown Instructor',
+        instructorAvatarUrl: user.avatarUrl || DEFAULT_AVATAR
       };
 
-      const response = await fetch(`${API_BASE_URL}/courses`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(apiData)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create course');
+      const newMockCourse = await MockServices.course.createCourse(mockCourseData);
+      
+      if (newMockCourse) {
+        const newCourse = transformMockCourse(newMockCourse);
+        setCourses(prev => [...prev, newCourse]);
+        return newCourse;
       }
-
-      const newApiCourse = await response.json();
-      const newCourse = transformApiCourse(newApiCourse);
       
-      // Update local state
-      setCourses(prev => [newCourse, ...prev]);
-      
-      return newCourse;
+      throw new Error('Failed to create course');
     } catch (error) {
       console.error('Error creating course:', error);
       setError(error instanceof Error ? error.message : 'Failed to create course');
@@ -249,11 +209,11 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [API_BASE_URL, getAuthHeaders, user, token]);
+  }, [user, transformMockCourse]);
 
-  // Update course
+  // Update course with validation
   const updateCourse = useCallback(async (id: string, courseData: Partial<CourseFormData>): Promise<Course | null> => {
-    if (!token) {
+    if (!user) {
       setError('User not authenticated');
       return null;
     }
@@ -262,47 +222,15 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
     setError(null);
 
     try {
-      // Filter only allowed fields for update based on UpdateCourseDto
-      const allowedFields = {
-        title: courseData.title,
-        description: courseData.description,
-        thumbnailUrl: courseData.thumbnailUrl,
-        category: courseData.category,
-        level: courseData.level,
-        price: courseData.price,
-        published: courseData.published,
-        tags: courseData.tags,
-        // YouTube related fields (now allowed in UpdateCourseDto)
-        youtubeEmbedUrl: courseData.youtubeEmbedUrl,
-        youtubeVideoId: courseData.youtubeVideoId,
-        youtubeThumbnailUrl: courseData.youtubeThumbnailUrl,
-      };
-
-      // Remove undefined fields to avoid sending unnecessary data
-      const updateData = Object.fromEntries(
-        Object.entries(allowedFields).filter(([, value]) => value !== undefined)
-      );
-
-      const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(updateData)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update course');
+      const updatedMockCourse = await MockServices.course.updateCourse(parseInt(id), courseData);
+      
+      if (updatedMockCourse) {
+        const updatedCourse = transformMockCourse(updatedMockCourse);
+        setCourses(prev => prev.map(course => course.id === id ? updatedCourse : course));
+        return updatedCourse;
       }
-
-      const updatedApiCourse = await response.json();
-      const updatedCourse = transformApiCourse(updatedApiCourse);
       
-      // Update local state
-      setCourses(prev => prev.map(course => 
-        course.id === id ? updatedCourse : course
-      ));
-      
-      return updatedCourse;
+      throw new Error('Failed to update course');
     } catch (error) {
       console.error('Error updating course:', error);
       setError(error instanceof Error ? error.message : 'Failed to update course');
@@ -310,11 +238,11 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [API_BASE_URL, getAuthHeaders, token]);
+  }, [user, transformMockCourse]);
 
-  // Delete course
+  // Delete course with confirmation
   const deleteCourse = useCallback(async (id: string): Promise<boolean> => {
-    if (!token) {
+    if (!user) {
       setError('User not authenticated');
       return false;
     }
@@ -323,19 +251,14 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete course');
-      }
-
-      // Update local state
-      setCourses(prev => prev.filter(course => course.id !== id));
+      const success = await MockServices.course.deleteCourse(parseInt(id));
       
-      return true;
+      if (success) {
+        setCourses(prev => prev.filter(course => course.id !== id));
+        return true;
+      }
+      
+      throw new Error('Failed to delete course');
     } catch (error) {
       console.error('Error deleting course:', error);
       setError(error instanceof Error ? error.message : 'Failed to delete course');
@@ -343,7 +266,7 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [API_BASE_URL, getAuthHeaders, token]);
+  }, [user]);
 
   // Get courses by instructor
   const getCoursesByInstructor = useCallback((instructorId: string): Course[] => {
@@ -355,35 +278,19 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
     return courses.filter(course => course.published);
   }, [courses]);
 
-  // Refresh courses manually
+  // Refresh courses
   const refreshCourses = useCallback(() => {
-    fetchCourses();
-  }, [fetchCourses]);
+    if (fetchCoursesRef.current) {
+      fetchCoursesRef.current();
+    }
+  }, []);
 
-  // Initial fetch on mount
+  // Initial fetch
   useEffect(() => {
     fetchCourses();
   }, [fetchCourses]);
 
-  // Auto-refresh every 30 seconds for realtime updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Use ref to access latest fetchCourses without creating dependency
-      if (fetchCoursesRef.current) {
-        setLoading(currentLoading => {
-          if (!currentLoading) {
-            // Only fetch if not currently loading
-            fetchCoursesRef.current?.();
-          }
-          return currentLoading;
-        });
-      }
-    }, 60000); // 60 seconds (1 minute) - reduced frequency to prevent excessive fetching
-
-    return () => clearInterval(interval);
-  }, []); // Empty dependency array to prevent re-creation
-
-  const contextValue: CourseContextType = {
+  const value = {
     courses,
     loading,
     error,
@@ -397,20 +304,16 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
   };
 
   return (
-    <CourseContext.Provider value={contextValue}>
+    <CourseContext.Provider value={value}>
       {children}
     </CourseContext.Provider>
   );
 };
 
-// Custom hook to use course context
 export const useCourseContext = (): CourseContextType => {
   const context = useContext(CourseContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useCourseContext must be used within a CourseProvider');
   }
   return context;
-};
-
-// Export types for use in other files
-export type { Course, CourseFormData, CourseContextType }; 
+}; 

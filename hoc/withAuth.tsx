@@ -13,7 +13,7 @@ const withAuth = <P extends object>(
 
     useEffect(() => {
       if (!isLoading && !token) { // Jika loading selesai dan tidak ada token (belum login)
-        router.replace('/auth/login'); // Redirect ke login
+        router.replace('/'); // Redirect ke login
       } else if (!isLoading && user && !allowedRoles.includes(user.role)) {
         // Pengguna login tapi tidak punya peran yang diizinkan
         router.replace('/dashboard/unauthorized'); // Atau halaman error akses
