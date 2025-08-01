@@ -3,16 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { MagnifyingGlassIcon, FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { VideoCameraIcon, DocumentTextIcon, QuestionMarkCircleIcon, PresentationChartLineIcon, SparklesIcon, BookOpenIcon } from '@heroicons/react/24/solid';
-
-interface Lesson {
-  id: string;
-  title: string;
-  type: 'video' | 'bacaan' | 'kuis' | 'tugas' | 'interaktif';
-  durationMinutes?: number;
-  status: 'selesai' | 'terkunci' | 'sedang_dipelajari' | 'selanjutnya';
-  url: string;
-  isPreviewable?: boolean;
-}
+import { Lesson } from '@/lib/types';
 
 interface Module {
   id: string;

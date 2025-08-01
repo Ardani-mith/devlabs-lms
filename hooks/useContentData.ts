@@ -67,10 +67,20 @@ export function useContentData({
     setError(null);
 
     try {
-      // Use mock service instead of real API
-      const result: ContentResponse = await import('@/lib/services/mockService').then(
-        ({ MockServices }) => MockServices.content.getContent(endpoint, filtersToUse)
-      );
+      // TODO: Replace with real API call to backend
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/content/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(filtersToUse),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch content: ${response.status}`);
+      }
+
+      const result: ContentResponse = await response.json();
       
       setData(prevData => {
         if (append && prevData) {

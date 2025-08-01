@@ -7,7 +7,6 @@ import {
   CheckCircleIcon, BellIcon
 } from '@heroicons/react/24/outline';
 import { ChartBarIcon, BriefcaseIcon } from 'lucide-react';
-import { MockServices } from '@/lib/services/mockService';
 
 // API Data Interface
 interface APIDataItem {
@@ -152,8 +151,21 @@ export const useDashboardData = () => {
       try {
         setIsLoading(true);
         
-        // Fetch dashboard data from mock service
-        const apiData: APIData = await MockServices.dashboard.getDashboardData(user.id);
+        // TODO: Replace with real API call to backend
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/dashboard/user/${user.id}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        let apiData: APIData = { activities: [], news: [] };
+        
+        if (response.ok) {
+          apiData = await response.json();
+        } else {
+          console.warn('Failed to fetch dashboard data, using empty data');
+        }
         
         const userData: UserDashboardData = {
           statistics,

@@ -13,10 +13,13 @@ export interface User {
 
 export interface Course {
   id: string;
+  slug: string;
   title: string;
+  description?: string;
   thumbnailUrl?: string;
   instructorName: string;
   instructorAvatarUrl?: string;
+  instructorId?: string;
   category: string;
   lessonsCount: number;
   totalDurationHours: number;
@@ -26,8 +29,104 @@ export interface Course {
   price: number | string;
   courseUrl: string;
   isNew?: boolean;
+  published?: boolean;
   tags?: string[];
+  youtubeEmbedUrl?: string;
+  youtubeVideoId?: string;
+  youtubeThumbnailUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Course Detail Types (for individual course pages)
+export interface Lesson {
+  id: string;
+  title: string;
+  type: "video" | "bacaan" | "kuis" | "tugas" | "interaktif";
+  durationMinutes?: number;
+  status: "selesai" | "terkunci" | "sedang_dipelajari" | "selanjutnya";
+  url: string;
+  isPreviewable?: boolean;
+}
+
+export interface Module {
+  id: string;
+  title: string;
   description?: string;
+  lessons: Lesson[];
+  isCollapsedInitially?: boolean;
+}
+
+export interface DiscussionReply {
+  id: string;
+  userName: string;
+  userAvatar?: string;
+  userRole: "Siswa" | "Pengajar";
+  timestamp: string;
+  text: string;
+  likes?: number;
+}
+
+export interface DiscussionComment {
+  id: string;
+  userName: string;
+  userAvatar?: string;
+  userRole: "Siswa" | "Pengajar";
+  timestamp: string;
+  text: string;
+  replies?: DiscussionReply[];
+  likes?: number;
+}
+
+export interface CourseDetail {
+  slug: string;
+  title: string;
+  tagline?: string;
+  instructorName: string;
+  instructorAvatar?: string;
+  instructorBio?: string;
+  instructorTitle?: string;
+  instructorCoursesCount?: number;
+  instructorStudentsCount?: number;
+  instructorRating?: number;
+  description: string;
+  fullDescription?: string;
+  thumbnailUrl?: string;
+  bannerUrl?: string;
+  category: string;
+  level: string;
+  rating: number;
+  reviewCount?: number;
+  studentsEnrolled: number;
+  studentCount?: number;
+  price: number | string;
+  originalPrice?: number;
+  modules: Module[];
+  discussionComments?: DiscussionComment[];
+  discussions?: DiscussionComment[];
+  isEnrolled?: boolean;
+  progress?: number;
+  userProgress?: number;
+  certificateUrl?: string;
+  hasCertificate?: boolean;
+  estimatedHours: number;
+  totalLessons?: number;
+  totalDurationHours?: number;
+  totalVideoHours?: number;
+  language: string;
+  lastUpdated: string;
+  updatedAt?: string;
+  lastAccessedLessonUrl?: string;
+  lastAccessedLessonTitle?: string;
+  prerequisites?: string[];
+  learningOutcomes?: string[];
+  whatYouWillLearn?: string[];
+  skillsYouWillGain?: string[];
+  toolsYouWillUse?: string[];
+  targetAudience?: string[];
+  faq?: Array<{ question: string; answer: string; }>;
+  relatedCourses?: Course[];
+  tags?: string[];
 }
 
 export interface StatCardData {
@@ -135,4 +234,4 @@ export interface SortOptions {
 }
 
 // Re-export new content system types
-export * from './content'; 
+export * from './content';

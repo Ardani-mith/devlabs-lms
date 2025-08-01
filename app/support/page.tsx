@@ -56,9 +56,19 @@ interface APISupportResponse {
 // API function to fetch support data
 const fetchSupportData = async (): Promise<SupportData> => {
   try {
-    // Use mock service instead of API
-    const { MockServices } = await import('@/lib/services/mockService');
-    const data: APISupportResponse = await MockServices.support.getSupportData();
+    // TODO: Replace with real API call to backend
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/support`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch support data: ${response.status}`);
+    }
+
+    const data: APISupportResponse = await response.json();
       
     // Map icons for categories
     const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {

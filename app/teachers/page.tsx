@@ -18,12 +18,20 @@ function TeacherDirectoryView() {
   useEffect(() => {
     const fetchTeachers = async () => {
       try {
-        // Use mock service instead of API
-        const mockTeachers = await import('@/lib/services/mockService').then(
-          ({ MockServices }) => MockServices.teacher.getTeachers()
-        );
-        
-        setTeachers(mockTeachers);
+        // TODO: Replace with real API call to backend
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/teachers`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch teachers: ${response.status}`);
+        }
+
+        const teachersData = await response.json();
+        setTeachers(teachersData);
       } catch (error) {
         console.error('Error fetching teachers:', error);
         setTeachers([]);

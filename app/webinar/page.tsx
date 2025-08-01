@@ -34,9 +34,19 @@ interface WebinarData {
 // API function to fetch webinar data
 const fetchWebinarData = async (): Promise<WebinarData> => {
   try {
-    // Use mock service instead of API
-    const { MockServices } = await import('@/lib/services/mockService');
-    return await MockServices.webinar.getWebinars();
+    // TODO: Replace with real API call to backend
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/webinars`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch webinars: ${response.status}`);
+    }
+
+    return await response.json();
   } catch (error) {
     console.error('Webinar API error:', error);
     return {

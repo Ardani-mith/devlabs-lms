@@ -26,8 +26,23 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'img.youtube.com', // <<< TAMBAHKAN DOMAIN INI
+        hostname: 'img.youtube.com', // YouTube thumbnail domain
         pathname: '/vi/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'youtu.be', // YouTube short URLs
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.youtube.com', // YouTube main domain
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'youtube.com', // YouTube without www
+        pathname: '/**',
       },
       {
         protocol: 'https',

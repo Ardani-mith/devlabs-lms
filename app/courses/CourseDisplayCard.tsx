@@ -4,32 +4,56 @@ import Link from "next/link";
 import {
   BookOpenIcon,
   ClockIcon,
-  UserCircleIcon,
   StarIcon,
 } from "@heroicons/react/24/solid";
 import SafeImage from "@/components/ui/SafeImage";
+import { Course } from "@/lib/types";
 
-export interface CourseDetails {
-  id: string;
-  slug: string;
-  title: string;
-  thumbnailUrl: string;
-  instructorName: string;
-  instructorAvatarUrl?: string;
-  category: string;
-  lessonsCount: number;
-  totalDurationHours: number;
-  level: "Pemula" | "Menengah" | "Lanjutan" | "Semua Level";
-  rating?: number;
-  studentsEnrolled?: number;
-  price?: number | "Gratis";
-  isNew?: boolean;
-  tags?: string[];
-  loading?: boolean;
+// YouTube Player Component
+interface YouTubePlayerProps {
+  videoUrl: string;
+  title?: string;
 }
 
+// Fungsi untuk mengekstrak Video ID dari berbagai format URL YouTube
+const getYouTubeVideoId = (url: string): string | null => {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return match && match[2].length === 11 ? match[2] : null;
+};
+
+export const YouTubePlayer = ({
+  videoUrl,
+  title = "Video Pembelajaran",
+}: YouTubePlayerProps) => {
+  const videoId = getYouTubeVideoId(videoUrl);
+
+  if (!videoId) {
+    return (
+      <div className="w-full aspect-video bg-neutral-800 flex items-center justify-center text-neutral-400">
+        URL Video YouTube tidak valid.
+      </div>
+    );
+  }
+
+  return (
+    <div className="aspect-video w-full overflow-hidden rounded-lg shadow-2xl">
+      <iframe
+        width="100%"
+        height="100%"
+        src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`}
+        title={title}
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+      ></iframe>
+    </div>
+  );
+};
+
+// Course Display Card Component
 interface CourseDisplayCardProps {
-  course: CourseDetails;
+  course: Course;
 }
 
 export function CourseDisplayCard({ course }: CourseDisplayCardProps) {
@@ -46,21 +70,7 @@ export function CourseDisplayCard({ course }: CourseDisplayCardProps) {
     studentsEnrolled,
     price,
     isNew,
-    loading,
   } = course;
-
-  if (loading) {
-    return (
-      <div className="animate-pulse bg-white dark:bg-neutral-800 rounded-xl shadow-lg overflow-hidden">
-        <div className="aspect-video bg-gray-200 dark:bg-neutral-700" />
-        <div className="p-5 space-y-4">
-          <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-3/4" />
-          <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-1/2" />
-          <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-2/3" />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <Link

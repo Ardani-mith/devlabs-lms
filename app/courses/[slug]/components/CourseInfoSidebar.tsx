@@ -14,9 +14,9 @@ import {
   CurrencyDollarIcon,
   HeartIcon,
 } from "@heroicons/react/24/solid";
-import { CourseDetail } from "../types/course";
-import { cardStyles, buttonStyles, textStyles } from "../utils/styles";
-import { formatDate, formatPrice } from "../utils/courseHelpers";
+import { CourseDetail } from "@/lib/types";
+import { formatDate, formatPrice } from "@/lib/utils/courseHelpers";
+import { cardStyles, buttonStyles, textStyles } from "@/lib/utils/styles";
 
 interface CourseInfoSidebarProps {
   courseData: CourseDetail;
@@ -88,24 +88,24 @@ export default function CourseInfoSidebar({
           <div className="w-full bg-gray-200 dark:bg-neutral-700 rounded-full h-3 mb-2 overflow-hidden">
             <div
               className="bg-gradient-to-r from-purple-500 to-brand-purple h-3 rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${courseData.userProgress}%` }}
+              style={{ width: `${courseData.userProgress || courseData.progress || 0}%` }}
             ></div>
           </div>
           
           <p className="text-sm font-semibold text-gray-700 dark:text-neutral-200 mb-4 text-right">
-            {courseData.userProgress}% Selesai
+            {courseData.userProgress || courseData.progress || 0}% Selesai
           </p>
 
           {/* Continue Learning Button */}
-          {courseData.lastAccessedLessonTitle && courseData.userProgress < 100 && (
+          {courseData.lastAccessedLessonTitle && (courseData.userProgress || courseData.progress || 0) < 100 && (
             <Link
               href={courseData.lastAccessedLessonUrl || "#"}
               className={`w-full group flex items-center justify-center ${buttonStyles.primary} text-sm`}
             >
               <PlayCircleIcon className="h-5 w-5 mr-2 transition-transform duration-200 group-hover:scale-110" />
               Lanjutkan:{" "}
-              {courseData.lastAccessedLessonTitle.length > 20
-                ? courseData.lastAccessedLessonTitle.substring(0, 20) + "..."
+              {(courseData.lastAccessedLessonTitle?.length || 0) > 20
+                ? courseData.lastAccessedLessonTitle?.substring(0, 20) + "..."
                 : courseData.lastAccessedLessonTitle}
             </Link>
           )}

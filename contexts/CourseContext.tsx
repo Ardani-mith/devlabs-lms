@@ -2,36 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { useAuth } from './AuthContext';
-import { MockServices } from '@/lib/services/mockService';
-import { MockCourse } from '@/lib/data/mockData';
-
-// Frontend Course interface (transformed from MockCourse)
-export interface Course {
-  id: string;
-  title: string;
-  description: string;
-  thumbnailUrl: string;
-  instructorName: string;
-  instructorAvatarUrl?: string;
-  instructorId: string;
-  category: string;
-  level: "Pemula" | "Menengah" | "Lanjutan" | "Semua Level";
-  price: number | "Gratis";
-  published: boolean;
-  rating?: number;
-  studentsEnrolled: number;
-  lessonsCount: number;
-  totalDurationHours: number;
-  courseUrl?: string;
-  isNew?: boolean;
-  tags: string[];
-  slug: string;
-  youtubeEmbedUrl: string;
-  youtubeVideoId: string;
-  youtubeThumbnailUrl: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import { Course } from '@/lib/types';
 
 export interface CourseFormData {
   title: string;
@@ -72,44 +43,41 @@ const DEFAULT_THUMBNAIL = '/images/course-placeholder.svg';
 const DEFAULT_AVATAR = '/images/avatar-placeholder.svg';
 
 export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fetchCoursesRef = useRef<(() => Promise<void>) | null>(null);
 
-  // Transform MockCourse to frontend Course interface with error handling
-  const transformMockCourse = useCallback((mockCourse: MockCourse): Course => {
+  // Transform backend course data to frontend Course interface
+  const transformBackendCourse = useCallback((backendCourse: any): Course => {
     try {
-      // Ensure required fields have default values
-      const transformedCourse: Course = {
-        id: (mockCourse.id || Date.now()).toString(),
-        title: mockCourse.title || 'Untitled Course',
-        description: mockCourse.description || 'No description available',
-        thumbnailUrl: mockCourse.thumbnailUrl || DEFAULT_THUMBNAIL,
-        instructorName: mockCourse.instructor?.name || 'Unknown Instructor',
-        instructorAvatarUrl: mockCourse.instructor?.avatarUrl || DEFAULT_AVATAR,
-        instructorId: (mockCourse.instructorId || 0).toString(),
-        category: mockCourse.category || 'Uncategorized',
-        level: (mockCourse.level as Course['level']) || "Pemula",
-        price: mockCourse.price === 0 ? "Gratis" : (mockCourse.price || 0),
-        published: Boolean(mockCourse.published),
-        rating: mockCourse.rating || 0,
-        studentsEnrolled: mockCourse.studentsEnrolled || 0,
-        lessonsCount: mockCourse.lessonsCount || 0,
-        totalDurationHours: mockCourse.totalDurationHours || 0,
-        courseUrl: `/courses/${mockCourse.slug || mockCourse.id}`,
-        isNew: Boolean(mockCourse.isNew),
-        tags: Array.isArray(mockCourse.tags) ? mockCourse.tags : [],
-        slug: mockCourse.slug || mockCourse.id.toString(),
-        youtubeEmbedUrl: mockCourse.youtubeEmbedUrl || '',
-        youtubeVideoId: mockCourse.youtubeVideoId || '',
-        youtubeThumbnailUrl: mockCourse.youtubeThumbnailUrl || '',
-        createdAt: mockCourse.createdAt || new Date().toISOString(),
-        updatedAt: mockCourse.updatedAt || new Date().toISOString(),
+      return {
+        id: backendCourse.id?.toString() || '',
+        slug: backendCourse.slug || backendCourse.id?.toString() || '',
+        title: backendCourse.title || 'Untitled Course',
+        description: backendCourse.description || 'No description available',
+        thumbnailUrl: backendCourse.thumbnailUrl || backendCourse.youtubeThumbnailUrl || DEFAULT_THUMBNAIL,
+        instructorName: backendCourse.instructor?.name || backendCourse.instructorName || 'Unknown Instructor',
+        instructorAvatarUrl: backendCourse.instructor?.avatarUrl || backendCourse.instructorAvatarUrl || DEFAULT_AVATAR,
+        instructorId: backendCourse.instructorId?.toString() || backendCourse.instructor?.id?.toString() || '0',
+        category: backendCourse.category || 'Uncategorized',
+        level: backendCourse.level || 'Pemula',
+        price: backendCourse.price || 0,
+        published: Boolean(backendCourse.published),
+        rating: backendCourse.rating || 0,
+        studentsEnrolled: backendCourse.studentsEnrolled || backendCourse._count?.enrollments || 0,
+        lessonsCount: backendCourse.lessonsCount || backendCourse._count?.lessons || 0,
+        totalDurationHours: backendCourse.totalDurationHours || 0,
+        courseUrl: `/courses/${backendCourse.slug || backendCourse.id}`,
+        isNew: Boolean(backendCourse.isNew),
+        tags: Array.isArray(backendCourse.tags) ? backendCourse.tags : [],
+        youtubeEmbedUrl: backendCourse.youtubeEmbedUrl || '',
+        youtubeVideoId: backendCourse.youtubeVideoId || '',
+        youtubeThumbnailUrl: backendCourse.youtubeThumbnailUrl || '',
+        createdAt: backendCourse.createdAt || new Date().toISOString(),
+        updatedAt: backendCourse.updatedAt || new Date().toISOString(),
       };
-
-      return transformedCourse;
     } catch (error) {
       console.error('Error transforming course:', error);
       // Return a safe default course object
@@ -124,9 +92,11 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
         level: "Pemula",
         price: 0,
         published: false,
+        rating: 0,
         studentsEnrolled: 0,
         lessonsCount: 0,
         totalDurationHours: 0,
+        courseUrl: '/courses/error',
         tags: [],
         slug: 'error',
         youtubeEmbedUrl: '',
@@ -138,7 +108,7 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
     }
   }, []);
 
-  // Fetch all courses using mock service with better error handling
+  // Fetch all courses from backend API
   const fetchCourses = useCallback(async () => {
     if (loading) return;
     
@@ -146,25 +116,36 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
     setError(null);
     
     try {
-      const mockCourses = await MockServices.course.getCourses();
-      if (!Array.isArray(mockCourses)) {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/courses`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch courses: ${response.status}`);
+      }
+
+      const backendCourses = await response.json();
+      
+      if (!Array.isArray(backendCourses)) {
         throw new Error('Invalid course data received');
       }
       
-      const transformedCourses = mockCourses
-        .map(transformMockCourse)
-        .filter(course => course !== null);
+      const transformedCourses = backendCourses
+        .map(transformBackendCourse)
+        .filter(course => course !== null) as Course[];
       
       setCourses(transformedCourses);
     } catch (error) {
       console.error('Error fetching courses:', error);
       setError(error instanceof Error ? error.message : 'Failed to fetch courses');
-      // Set empty courses array on error to prevent UI from breaking
       setCourses([]);
     } finally {
       setLoading(false);
     }
-  }, [transformMockCourse]);
+  }, [transformBackendCourse]);
 
   // Update ref with latest fetchCourses
   fetchCoursesRef.current = fetchCourses;
@@ -173,6 +154,11 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
   const createCourse = useCallback(async (courseData: CourseFormData): Promise<Course | null> => {
     if (!user) {
       setError('User not authenticated');
+      return null;
+    }
+
+    if (!token) {
+      setError('No authentication token found. Please log in again.');
       return null;
     }
 
@@ -186,22 +172,34 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
     setError(null);
 
     try {
-      const mockCourseData = {
-        ...courseData,
-        instructorId: user.id,
-        instructorName: user.name || 'Unknown Instructor',
-        instructorAvatarUrl: user.avatarUrl || DEFAULT_AVATAR
-      };
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/courses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+        },
+        body: JSON.stringify(courseData),
+      });
 
-      const newMockCourse = await MockServices.course.createCourse(mockCourseData);
-      
-      if (newMockCourse) {
-        const newCourse = transformMockCourse(newMockCourse);
-        setCourses(prev => [...prev, newCourse]);
-        return newCourse;
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication required. Please log in to create courses.');
+        }
+        if (response.status === 403) {
+          throw new Error('Permission denied. Only teachers and admins can create courses.');
+        }
+        if (response.status === 400) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Invalid course data provided.');
+        }
+        throw new Error(`Failed to create course: ${response.status}`);
       }
+
+      const newBackendCourse = await response.json();
+      const newCourse = transformBackendCourse(newBackendCourse);
       
-      throw new Error('Failed to create course');
+      setCourses(prev => [...prev, newCourse]);
+      return newCourse;
     } catch (error) {
       console.error('Error creating course:', error);
       setError(error instanceof Error ? error.message : 'Failed to create course');
@@ -209,7 +207,7 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [user, transformMockCourse]);
+  }, [user, token, transformBackendCourse]);
 
   // Update course with validation
   const updateCourse = useCallback(async (id: string, courseData: Partial<CourseFormData>): Promise<Course | null> => {
@@ -218,19 +216,52 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
       return null;
     }
 
+    if (!token) {
+      setError('No authentication token found. Please log in again.');
+      return null;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const updatedMockCourse = await MockServices.course.updateCourse(parseInt(id), courseData);
-      
-      if (updatedMockCourse) {
-        const updatedCourse = transformMockCourse(updatedMockCourse);
-        setCourses(prev => prev.map(course => course.id === id ? updatedCourse : course));
-        return updatedCourse;
+      // Convert string ID to number for backend API
+      const numericId = parseInt(id, 10);
+      if (isNaN(numericId)) {
+        throw new Error('Invalid course ID format');
       }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/courses/${numericId}`, {
+        method: 'PATCH', // Backend uses PATCH, not PUT
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+        },
+        body: JSON.stringify(courseData),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication required. Please log in to update courses.');
+        }
+        if (response.status === 403) {
+          throw new Error('Permission denied. Only teachers and admins can update courses.');
+        }
+        if (response.status === 404) {
+          throw new Error('Course not found. It may have been deleted or you may not have permission to edit it.');
+        }
+        if (response.status === 400) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Invalid course data provided.');
+        }
+        throw new Error(`Failed to update course: ${response.status}`);
+      }
+
+      const updatedBackendCourse = await response.json();
+      const updatedCourse = transformBackendCourse(updatedBackendCourse);
       
-      throw new Error('Failed to update course');
+      setCourses(prev => prev.map(course => course.id === id ? updatedCourse : course));
+      return updatedCourse;
     } catch (error) {
       console.error('Error updating course:', error);
       setError(error instanceof Error ? error.message : 'Failed to update course');
@@ -238,7 +269,7 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [user, transformMockCourse]);
+  }, [user, token, transformBackendCourse]);
 
   // Delete course with confirmation
   const deleteCourse = useCallback(async (id: string): Promise<boolean> => {
@@ -247,18 +278,44 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
       return false;
     }
 
+    if (!token) {
+      setError('No authentication token found. Please log in again.');
+      return false;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const success = await MockServices.course.deleteCourse(parseInt(id));
-      
-      if (success) {
-        setCourses(prev => prev.filter(course => course.id !== id));
-        return true;
+      // Convert string ID to number for backend API
+      const numericId = parseInt(id, 10);
+      if (isNaN(numericId)) {
+        throw new Error('Invalid course ID format');
       }
-      
-      throw new Error('Failed to delete course');
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/courses/${numericId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication required. Please log in to delete courses.');
+        }
+        if (response.status === 403) {
+          throw new Error('Permission denied. Only teachers and admins can delete courses.');
+        }
+        if (response.status === 404) {
+          throw new Error('Course not found. It may have been already deleted.');
+        }
+        throw new Error(`Failed to delete course: ${response.status}`);
+      }
+
+      setCourses(prev => prev.filter(course => course.id !== id));
+      return true;
     } catch (error) {
       console.error('Error deleting course:', error);
       setError(error instanceof Error ? error.message : 'Failed to delete course');
@@ -266,7 +323,7 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, token]);
 
   // Get courses by instructor
   const getCoursesByInstructor = useCallback((instructorId: string): Course[] => {
@@ -316,4 +373,4 @@ export const useCourseContext = (): CourseContextType => {
     throw new Error('useCourseContext must be used within a CourseProvider');
   }
   return context;
-}; 
+};

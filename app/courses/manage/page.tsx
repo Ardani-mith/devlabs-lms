@@ -1,25 +1,43 @@
 "use client";
 
-// Contoh di halaman /dashboard/courses/manage/page.tsx
+import React from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function ManageCoursesPage() {
-  const { user } = useAuth();
+// Import the main course management component from manage-course
+import APIIntegratedCourseManagement from '@/app/manage-course/page-api-integrated';
 
-  if (user?.role !== 'ADMIN' && user?.role !== 'TEACHER') {
-    return <p>Anda tidak memiliki akses ke halaman ini.</p>; // Atau redirect
+/**
+ * Course Management Page
+ * Route: /courses/manage
+ * 
+ * This page provides a clean URL structure while using the 
+ * full-featured course management implementation
+ */
+export default function CoursesManagePage() {
+  const { user } = useAuth();
+  const router = useRouter();
+
+  // Role-based access control
+  if (!user || (user.role !== 'TEACHER' && user.role !== 'ADMIN')) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Access Denied
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            Only teachers and admins can access course management.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <h1>Manajemen Kursus</h1>
-      {user?.role === 'ADMIN' && (
-        <button>Buat Kursus Baru untuk Instruktur Lain</button>
-      )}
-      {user?.role === 'TEACHER' && (
-        <button>Buat Kursus Baru Saya</button>
-      )}
-      {/* ... Daftar kursus yang bisa dikelola ... */}
+    <div className="min-h-screen bg-gray-50 dark:bg-neutral-900">
+      {/* Use the existing full-featured course management */}
+      <APIIntegratedCourseManagement />
     </div>
   );
 }

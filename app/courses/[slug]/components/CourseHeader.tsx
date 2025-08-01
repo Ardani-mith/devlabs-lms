@@ -11,39 +11,37 @@ import {
   HeartIcon,
   CurrencyDollarIcon,
 } from "@heroicons/react/24/solid";
-
-interface CourseDetail {
-  slug: string;
-  title: string;
-  tagline?: string;
-  instructorName: string;
-  instructorAvatar?: string;
-  thumbnailUrl: string;
-  bannerUrl?: string;
-  rating: number;
-  reviewCount: number;
-  studentCount: number;
-  userProgress: number;
-  isEnrolled: boolean;
-  lastAccessedLessonUrl?: string;
-  price?: number;
-  originalPrice?: number;
-  category: string;
-  level: string;
-  updatedAt: string;
-  language: string;
-}
+import { CourseDetail } from "@/lib/types";
+import { extractYouTubeVideoId, getYouTubeThumbnail, isYouTubeUrl } from "@/lib/utils/youtube";
 
 interface CourseHeaderProps {
   course: CourseDetail;
 }
 
 export default function CourseHeader({ course }: CourseHeaderProps) {
+  // Function to get proper image URL, converting YouTube URLs to thumbnails
+  const getProperImageUrl = (url: string | undefined): string => {
+    if (!url) return '/images/default-course-banner.jpg';
+    
+    // If it's a YouTube URL, convert to thumbnail
+    if (isYouTubeUrl(url)) {
+      const videoId = extractYouTubeVideoId(url);
+      if (videoId) {
+        return getYouTubeThumbnail(videoId, 'maxres');
+      }
+    }
+    
+    // Return the URL as-is if it's not a YouTube URL
+    return url;
+  };
+
+  const imageUrl = getProperImageUrl(course.bannerUrl || course.thumbnailUrl);
+
   return (
     <div className="relative text-white pt-10 pb-8 md:pt-16 md:pb-12 px-4 sm:px-6 lg:px-8 shadow-2xl overflow-hidden">
       <div className="absolute inset-0">
         <Image
-          src={course.bannerUrl || course.thumbnailUrl}
+          src={imageUrl}
           alt={`${course.title} banner`}
           fill
           sizes="100vw"
@@ -92,17 +90,17 @@ export default function CourseHeader({ course }: CourseHeaderProps) {
           <div className="flex items-center">
             <StarIconSolid className="h-5 w-5 text-yellow-400 mr-1" />
             <span className="font-semibold text-white">
-              {course.rating.toFixed(1)}
+              {(course.rating || 0).toFixed(1)}
             </span>
             <span className="ml-1 text-neutral-300">
-              ({course.reviewCount.toLocaleString()} ulasan)
+              ({(course.reviewCount || 0).toLocaleString()} ulasan)
             </span>
           </div>
           
           <div className="flex items-center">
             <UsersIcon className="h-5 w-5 text-neutral-300 mr-1" />
             <span className="text-neutral-200">
-              {course.studentCount.toLocaleString()} siswa terdaftar
+              {(course.studentCount || course.studentsEnrolled || 0).toLocaleString()} siswa terdaftar
             </span>
           </div>
         </div>
@@ -116,7 +114,7 @@ export default function CourseHeader({ course }: CourseHeaderProps) {
             <div className="w-full bg-white/20 dark:bg-black/30 rounded-full h-3 overflow-hidden">
               <div
                 className="bg-gradient-to-r from-purple-500 to-brand-purple h-3 rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${course.userProgress}%` }}
+                style={{ width: `${(course.userProgress || course.progress || 0)}%` }}
               ></div>
             </div>
           </div>
@@ -129,12 +127,12 @@ export default function CourseHeader({ course }: CourseHeaderProps) {
               className="w-full sm:w-auto flex items-center justify-center px-8 py-3.5 border-2 border-transparent text-base font-semibold rounded-lg text-white bg-brand-purple hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-500 transition-all duration-300 shadow-lg transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-500/50"
             >
               <PlayCircleIcon className="h-6 w-6 mr-2.5" />
-              {course.userProgress > 0 ? "Lanjutkan Belajar" : "Mulai Belajar Sekarang"}
+              {(course.userProgress || course.progress || 0) > 0 ? "Lanjutkan Belajar" : "Mulai Belajar Sekarang"}
             </Link>
           ) : (
             <button className="w-full sm:w-auto flex items-center justify-center px-8 py-3.5 border-2 border-transparent text-base font-semibold rounded-lg text-white bg-green-600 hover:bg-green-700 transition-all duration-300 shadow-lg transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-green-500/50">
               <CurrencyDollarIcon className="h-6 w-6 mr-2.5" />
-              Daftar Kursus (Rp{course.price?.toLocaleString("id-ID") || "N/A"})
+              Daftar Kursus (Rp{course.price?.toLocaleString?.("id-ID") || "N/A"})
               {course.originalPrice && (
                 <span className="ml-2 line-through text-sm opacity-80">
                   Rp{course.originalPrice.toLocaleString("id-ID")}
@@ -150,12 +148,14 @@ export default function CourseHeader({ course }: CourseHeaderProps) {
         
         <p className="text-xs text-neutral-300 dark:text-neutral-400 mt-5">
           Terakhir diperbarui:{" "}
-          {new Date(course.updatedAt).toLocaleDateString("id-ID", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}{" "}
-          • Bahasa: {course.language}
+          {course.updatedAt || course.lastUpdated ? 
+            new Date(course.updatedAt || course.lastUpdated).toLocaleDateString("id-ID", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            }) : "N/A"
+          }{" "}
+          • Bahasa: {course.language || "Indonesia"}
         </p>
       </div>
     </div>

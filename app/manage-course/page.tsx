@@ -9,7 +9,8 @@ import {
   AcademicCapIcon, PlayIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCourseContext, Course, CourseFormData } from '@/contexts/CourseContext';
+import { useCourseContext, CourseFormData } from '@/contexts/CourseContext';
+import { Course } from '@/lib/types';
 import { getProperThumbnailUrl, getYouTubeEmbedUrl, validateYouTubeUrl } from '@/lib/utils/youtube';
 import LessonManager from './components/LessonManager';
 import SafeImage from '@/components/ui/SafeImage';
@@ -58,8 +59,18 @@ const validateForm = (data: CourseFormData): string[] => {
 
 // Main Component
 export default function ManageCoursePage() {
-  const { user } = useAuth();
+  const { user, loginWithCredentials } = useAuth();
   const { loading, createCourse, updateCourse, deleteCourse, getCoursesByInstructor, error: contextError } = useCourseContext();
+
+  // Demo login functionality for testing
+  const handleDemoLogin = async (username: string, password: string) => {
+    const result = await loginWithCredentials(username, password);
+    if (result.success) {
+      showNotification('success', `Logged in as ${username}`);
+    } else {
+      showNotification('error', result.error || 'Login failed');
+    }
+  };
 
   // Local state
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -250,16 +261,16 @@ export default function ManageCoursePage() {
   const openEditForm = (course: Course) => {
     setFormData({
       title: course.title,
-      description: course.description,
-      thumbnailUrl: course.thumbnailUrl,
+      description: course.description || '',
+      thumbnailUrl: course.thumbnailUrl || '',
       youtubeEmbedUrl: course.youtubeEmbedUrl || '',
       youtubeVideoId: course.youtubeVideoId || '',
       youtubeThumbnailUrl: course.youtubeThumbnailUrl || '',
       category: course.category,
-      level: course.level === "Semua Level" ? "Pemula" : course.level,
+      level: (course.level as "Pemula" | "Menengah" | "Lanjutan") || "Pemula",
       price: typeof course.price === 'number' ? course.price : 0,
-      published: course.published,
-      tags: course.tags,
+      published: course.published || false,
+      tags: course.tags || [],
       lessonsCount: course.lessonsCount,
       totalDurationHours: course.totalDurationHours
     });
@@ -399,6 +410,7 @@ export default function ManageCoursePage() {
 
         {/* Lesson Manager */}
         <LessonManager 
+          key={selectedCourseForLessons.id}
           course={selectedCourseForLessons}
           onClose={() => setSelectedCourseForLessons(null)}
         />
@@ -449,8 +461,46 @@ export default function ManageCoursePage() {
         </div>
       </header>
 
+      {/* Demo Login Section */}
+      {!user && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-8">
+          <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-3">
+            🔐 Demo Login (For Testing)
+          </h3>
+          <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-4">
+            Please log in with a demo account to test course creation:
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => handleDemoLogin('dani', '123')}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors"
+            >
+              Login as ADMIN (dani)
+            </button>
+            <button
+              onClick={() => handleDemoLogin('teacher', 'password123')}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
+            >
+              Login as TEACHER
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Current User Info */}
+      {user && (
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-8">
+          <h3 className="text-lg font-semibold text-green-800 dark:text-green-200 mb-2">
+            ✅ Logged in as: {user.name || user.username}
+          </h3>
+          <p className="text-sm text-green-700 dark:text-green-300">
+            Role: <span className="font-medium">{user.role}</span> • ID: {user.id}
+          </p>
+        </div>
+      )}
+
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+      {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         <div className="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -497,7 +547,7 @@ export default function ManageCoursePage() {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Course Grid */}
       {courses.length === 0 ? (
@@ -821,4 +871,4 @@ export default function ManageCoursePage() {
       )}
     </div>
   );
-} 
+}

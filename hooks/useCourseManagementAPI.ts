@@ -11,8 +11,6 @@ import {
   YouTube
 } from '../app/manage-course/types/course-management';
 
-import { MockServices } from '@/lib/services/mockService';
-
 // API Base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300';
 
