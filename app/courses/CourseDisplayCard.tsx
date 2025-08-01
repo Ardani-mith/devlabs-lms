@@ -1,154 +1,168 @@
-import Image from "next/image";
+"use client";
+
 import Link from "next/link";
 import {
   BookOpenIcon,
   ClockIcon,
-  UserCircleIcon,
   StarIcon,
 } from "@heroicons/react/24/solid";
-import { getProperThumbnailUrl } from "@/lib/utils/youtube";
+import SafeImage from "@/components/ui/SafeImage";
+import { Course } from "@/lib/types";
 
-export interface CourseDetails {
-  id: string;
-  slug: string;
-  title: string;
-  thumbnailUrl: string;
-  instructorName: string;
-  instructorAvatarUrl?: string;
-  category: string;
-  lessonsCount: number;
-  totalDurationHours: number;
-  level: "Pemula" | "Menengah" | "Lanjutan" | "Semua Level";
-  rating?: number;
-  studentsEnrolled?: number;
-  price?: number | "Gratis";
-  isNew?: boolean;
-  tags?: string[];
-  loading?: boolean;
+// YouTube Player Component
+interface YouTubePlayerProps {
+  videoUrl: string;
+  title?: string;
 }
 
-interface CourseDisplayCardProps {
-  course: CourseDetails;
-}
+// Fungsi untuk mengekstrak Video ID dari berbagai format URL YouTube
+const getYouTubeVideoId = (url: string): string | null => {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return match && match[2].length === 11 ? match[2] : null;
+};
 
-export function CourseDisplayCard({ course }: CourseDisplayCardProps) {
-  const levelColor =
-    course.level === "Pemula" ? "bg-green-100 dark:bg-green-700/30 text-green-700 dark:text-green-300" :
-    course.level === "Menengah" ? "bg-yellow-100 dark:bg-yellow-700/30 text-yellow-700 dark:text-yellow-300" :
-    course.level === "Lanjutan" ? "bg-red-100 dark:bg-red-700/30 text-red-700 dark:text-red-300" :
-    "bg-blue-100 dark:bg-blue-700/30 text-blue-700 dark:text-blue-300";
+export const YouTubePlayer = ({
+  videoUrl,
+  title = "Video Pembelajaran",
+}: YouTubePlayerProps) => {
+  const videoId = getYouTubeVideoId(videoUrl);
 
-  const courseHref = `/courses/${course.slug}`;
-
-  if (course.loading) {
+  if (!videoId) {
     return (
-      <div className="relative flex flex-col bg-white dark:bg-transparent border border-gray-200 dark:border-transparent rounded-xl shadow-lg overflow-hidden h-full animate-pulse">
-        <div className="relative w-full h-48 sm:h-52 bg-gray-200 dark:bg-neutral-700"></div>
-        <div className="p-5 flex-grow flex flex-col space-y-3">
-          <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-1/4"></div>
-          <div className="h-6 bg-gray-200 dark:bg-neutral-700 rounded w-3/4"></div>
-          <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-1/2"></div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded"></div>
-            <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded"></div>
-          </div>
-          <div className="mt-auto pt-3 flex justify-between items-center border-t border-gray-200 dark:border-neutral-700/60">
-            <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-1/4"></div>
-            <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-1/4"></div>
-          </div>
-        </div>
+      <div className="w-full aspect-video bg-neutral-800 flex items-center justify-center text-neutral-400">
+        URL Video YouTube tidak valid.
       </div>
     );
   }
 
   return (
-    <Link href={courseHref} className="group block">
-      <div className="relative flex flex-col bg-white dark:bg-transparent border border-gray-200 dark:border-transparent rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 ease-in-out transform hover:-translate-y-1.5 overflow-hidden h-full">
-        <div className="relative w-full h-48 sm:h-52">
-          <Image
-            src={getProperThumbnailUrl(course.thumbnailUrl)}
-            alt={course.title}
-            layout="fill"
-            className="object-cover group-hover:scale-100 transition-transform duration-500 ease-in-out"
-            priority={course.isNew}
-          />
-          {course.isNew && (
-            <span className="absolute top-3 right-3 bg-red-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full shadow-md animate-pulse">
-              BARU
-            </span>
-          )}
-          <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 via-black/40 to-transparent">
-            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${levelColor} shadow-sm`}>
-              {course.level}
+    <div className="aspect-video w-full overflow-hidden rounded-lg shadow-2xl">
+      <iframe
+        width="100%"
+        height="100%"
+        src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`}
+        title={title}
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+      ></iframe>
+    </div>
+  );
+};
+
+// Course Display Card Component
+interface CourseDisplayCardProps {
+  course: Course;
+}
+
+export function CourseDisplayCard({ course }: CourseDisplayCardProps) {
+  const {
+    slug,
+    title,
+    thumbnailUrl,
+    instructorName,
+    instructorAvatarUrl,
+    lessonsCount,
+    totalDurationHours,
+    level,
+    rating,
+    studentsEnrolled,
+    price,
+    isNew,
+  } = course;
+
+  return (
+    <Link
+      href={`/courses/${slug}`}
+      className="group bg-white dark:bg-neutral-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col"
+    >
+      {/* Course Thumbnail */}
+      <div className="relative aspect-video overflow-hidden bg-gray-100 dark:bg-neutral-900">
+        <SafeImage
+          src={thumbnailUrl}
+          alt={title}
+          fill
+          className="object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out"
+        />
+        {isNew && (
+          <span className="absolute top-4 left-4 bg-brand-purple text-white text-xs font-semibold px-2 py-1 rounded-full">
+            Baru
+          </span>
+        )}
+        {price === "Gratis" && (
+          <span className="absolute top-4 right-4 bg-green-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
+            Gratis
+          </span>
+        )}
+      </div>
+
+      {/* Course Info */}
+      <div className="flex-1 p-5 space-y-4">
+        <div className="space-y-2">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white line-clamp-2 group-hover:text-brand-purple dark:group-hover:text-purple-400 transition-colors">
+            {title}
+          </h3>
+          <div className="flex items-center space-x-2">
+            <div className="relative w-6 h-6 rounded-full overflow-hidden bg-gray-200 dark:bg-neutral-700">
+              <SafeImage
+                src={instructorAvatarUrl || ""}
+                alt={instructorName}
+                fill
+                className="object-cover"
+              />
+            </div>
+            <span className="text-sm text-gray-600 dark:text-neutral-400">
+              {instructorName}
             </span>
           </div>
         </div>
 
-        <div className="p-5 flex-grow flex flex-col">
-          <span className="text-xs font-medium text-brand-purple dark:text-purple-400 mb-1 uppercase tracking-wider">
-            {course.category}
+        {/* Course Stats */}
+        <div className="flex items-center justify-between text-sm text-gray-600 dark:text-neutral-400">
+          <div className="flex items-center space-x-4">
+            <span className="flex items-center">
+              <BookOpenIcon className="w-4 h-4 mr-1" />
+              {lessonsCount} Pelajaran
+            </span>
+            <span className="flex items-center">
+              <ClockIcon className="w-4 h-4 mr-1" />
+              {totalDurationHours} Jam
+            </span>
+          </div>
+          <span className="px-2 py-1 rounded-lg bg-gray-100 dark:bg-neutral-700 text-xs font-medium">
+            {level}
           </span>
-          <h3 className="text-lg font-bold text-gray-800 dark:text-neutral-100 mb-2 line-clamp-2 group-hover:text-brand-purple dark:group-hover:text-purple-300 transition-colors">
-            {course.title}
-          </h3>
+        </div>
 
-          <div className="flex items-center text-xs text-gray-600 dark:text-neutral-400 mb-3">
-            {course.instructorAvatarUrl ? (
-              <Image 
-                src={getProperThumbnailUrl(
-                  course.instructorAvatarUrl, 
-                  'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face'
-                )}
-                alt={course.instructorName} 
-                width={20} 
-                height={20} 
-                className="rounded-full mr-1.5 object-cover"
-              />
-            ) : (
-              <UserCircleIcon className="h-5 w-5 mr-1.5 text-gray-400 dark:text-neutral-500"/>
-            )}
-            <span>{course.instructorName}</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-gray-700 dark:text-neutral-300 my-3">
-            <div className="flex items-center" title="Jumlah Pelajaran">
-              <BookOpenIcon className="h-4 w-4 mr-1.5 text-blue-500 dark:text-blue-400 flex-shrink-0" />
-              <span>{course.lessonsCount} Lessons</span>
-            </div>
-            <div className="flex items-center" title="Total Durasi">
-              <ClockIcon className="h-4 w-4 mr-1.5 text-green-500 dark:text-green-400 flex-shrink-0" />
-              <span>{course.totalDurationHours} Jam</span>
-            </div>
-          </div>
-
-          {course.tags && course.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 my-2">
-              {course.tags.slice(0, 2).map(tag => (
-                <span key={tag} className="px-2 py-0.5 text-xs bg-gray-100 dark:bg-neutral-700 text-gray-600 dark:text-neutral-300 rounded-full">{tag}</span>
-              ))}
-            </div>
-          )}
-          
-          <div className="mt-auto pt-3 flex justify-between items-center border-t border-gray-200 dark:border-neutral-700/60">
-            {typeof course.rating === 'number' ? (
-              <div className="flex items-center text-sm">
-                <StarIcon className="h-5 w-5 text-yellow-400 dark:text-yellow-300 mr-1" />
-                <span className="font-semibold text-gray-700 dark:text-neutral-200">{course.rating.toFixed(1)}</span>
-                {course.studentsEnrolled && <span className="text-xs text-gray-500 dark:text-neutral-400 ml-1.5">({course.studentsEnrolled})</span>}
-              </div>
-            ) : (
-                <div className="text-xs text-gray-500 dark:text-neutral-400">Belum ada rating</div>
-            )}
-
-            {typeof course.price === 'number' ? (
-              <span className="rounded-lg bg-transparent border border-brand-purple dark:border-purple-500 px-3 py-1 text-sm font-medium text-brand-purple dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/50 transition-colors">
-                $ {course.price.toLocaleString('id-ID')}
+        {/* Rating and Price */}
+        <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-neutral-700">
+          <div className="flex items-center space-x-1">
+            <StarIcon className="w-4 h-4 text-yellow-400" />
+            <span className="text-sm font-medium text-gray-900 dark:text-white">
+              {rating?.toFixed(1) || "N/A"}
+            </span>
+            {studentsEnrolled && (
+              <span className="text-sm text-gray-500 dark:text-neutral-400">
+                ({studentsEnrolled} siswa)
               </span>
-            ) : course.price === "Gratis" ? (
-              <span className="text-md font-semibold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-700/30 px-2.5 py-1 rounded-md">
-                Gratis
+            )}
+          </div>
+          <div className="text-right">
+            {price === "Gratis" ? (
+              <span className="text-green-500 font-semibold">Gratis</span>
+            ) : (
+              <span className="text-brand-purple dark:text-purple-400 font-semibold">
+                {typeof price === "number"
+                  ? new Intl.NumberFormat("id-ID", {
+                      style: "currency",
+                      currency: "IDR",
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    }).format(price)
+                  : "N/A"}
               </span>
-            ) : null}
+            )}
           </div>
         </div>
       </div>

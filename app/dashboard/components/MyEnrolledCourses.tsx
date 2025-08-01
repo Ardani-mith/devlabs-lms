@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
+import SafeImage from '@/components/ui/SafeImage';
 import Link from 'next/link';
 import {
   BookOpenIcon,
@@ -281,7 +281,7 @@ export default function MyEnrolledCourses() {
           {filteredCourses.map((enrollment) => (
             <div key={enrollment.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition-shadow">
               <div className="relative h-48">
-                <Image
+                <SafeImage
                   src={enrollment.course.thumbnailUrl}
                   alt={enrollment.course.title}
                   fill

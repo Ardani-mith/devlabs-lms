@@ -4,9 +4,29 @@ import { UserDashboardData, DashboardConfig, StatCardData, QuickAccessLink, Dash
 import {
   UsersIcon, BookOpenIcon, UserCircleIcon, CurrencyDollarIcon,
   ChatBubbleLeftRightIcon, StarIcon, ClockIcon, DocumentCheckIcon,
-  CheckCircleIcon, LightBulbIcon, BellIcon
+  CheckCircleIcon, BellIcon
 } from '@heroicons/react/24/outline';
 import { ChartBarIcon, BriefcaseIcon } from 'lucide-react';
+
+// API Data Interface
+interface APIDataItem {
+  id?: string | number;
+  title: string;
+  description: string;
+  date?: string;
+  thumbnailUrl?: string;
+  url?: string;
+  category?: string;
+}
+
+interface APIData {
+  activities?: APIDataItem[];
+  news?: APIDataItem[];
+  deadlines?: APIDataItem[];
+  completedCourses?: APIDataItem[];
+  notifications?: APIDataItem[];
+  newLaunches?: APIDataItem[];
+}
 
 const ROLE_CONFIGS: Record<string, DashboardConfig> = {
   ADMIN: {
@@ -92,41 +112,7 @@ const ROLE_QUICK_ACCESS: Record<string, QuickAccessLink[]> = {
   ],
 };
 
-// API function to fetch dashboard data
-const fetchDashboardDataFromAPI = async (userId: string, userRole: string) => {
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/dashboard/${userId}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        'Content-Type': 'application/json',
-      },
-    });
 
-    if (response.ok) {
-      return await response.json();
-    } else {
-      // Return empty data structure if API fails
-      return {
-        activities: [],
-        newLaunches: [],
-        completedCourses: [],
-        deadlines: [],
-        news: [],
-        notifications: []
-      };
-    }
-  } catch (error) {
-    console.error('Dashboard API error:', error);
-    return {
-      activities: [],
-      newLaunches: [],
-      completedCourses: [],
-      deadlines: [],
-      news: [],
-      notifications: []
-    };
-  }
-};
 
 export const useDashboardData = () => {
   const { user, isLoading: isAuthLoading } = useAuth();
@@ -165,40 +151,53 @@ export const useDashboardData = () => {
       try {
         setIsLoading(true);
         
-        // Fetch real dashboard data from API
-        const apiData = await fetchDashboardDataFromAPI(user.id?.toString() || '', user.role || 'USER');
+        // TODO: Replace with real API call to backend
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/dashboard/user/${user.id}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        let apiData: APIData = { activities: [], news: [] };
+        
+        if (response.ok) {
+          apiData = await response.json();
+        } else {
+          console.warn('Failed to fetch dashboard data, using empty data');
+        }
         
         const userData: UserDashboardData = {
           statistics,
           progress,
           quickAccessLinks,
-          activities: (apiData.activities || []).map((item: any) => ({ 
+          activities: (apiData.activities || []).map((item: APIDataItem) => ({ 
             ...item, 
             id: item.id?.toString() || Math.random().toString(),
             contentType: 'activity' as const,
             icon: CheckCircleIcon
           })) as DashboardContent[],
-          news: (apiData.news || []).map((item: any) => ({ 
+          news: (apiData.news || []).map((item: APIDataItem) => ({ 
             ...item, 
             id: item.id?.toString() || Math.random().toString(),
             contentType: 'news' as const
           })) as DashboardContent[],
-          deadlines: (apiData.deadlines || []).map((item: any) => ({ 
+          deadlines: (apiData.deadlines || []).map((item: APIDataItem) => ({ 
             ...item, 
             id: item.id?.toString() || Math.random().toString(),
             contentType: 'deadline' as const
           })) as DashboardContent[],
-          completedCourses: (apiData.completedCourses || []).map((item: any) => ({ 
+          completedCourses: (apiData.completedCourses || []).map((item: APIDataItem) => ({ 
             ...item, 
             id: item.id?.toString() || Math.random().toString(),
             contentType: 'course' as const
           })) as DashboardContent[],
-          notifications: (apiData.notifications || []).map((item: any) => ({ 
+          notifications: (apiData.notifications || []).map((item: APIDataItem) => ({ 
             ...item, 
             id: item.id?.toString() || Math.random().toString(),
             contentType: 'notification' as const
           })) as DashboardContent[],
-          newLaunches: (apiData.newLaunches || []).map((item: any) => ({ 
+          newLaunches: (apiData.newLaunches || []).map((item: APIDataItem) => ({ 
             ...item, 
             id: item.id?.toString() || Math.random().toString(),
             contentType: 'course' as const

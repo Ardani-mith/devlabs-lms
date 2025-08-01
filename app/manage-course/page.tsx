@@ -9,9 +9,11 @@ import {
   AcademicCapIcon, PlayIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCourseContext, Course, CourseFormData } from '@/contexts/CourseContext';
-import { getProperThumbnailUrl } from '@/lib/utils/youtube';
+import { useCourseContext, CourseFormData } from '@/contexts/CourseContext';
+import { Course } from '@/lib/types';
+import { getProperThumbnailUrl, getYouTubeEmbedUrl, validateYouTubeUrl } from '@/lib/utils/youtube';
 import LessonManager from './components/LessonManager';
+import SafeImage from '@/components/ui/SafeImage';
 
 // Types
 interface CourseStats {
@@ -28,10 +30,47 @@ interface NotificationData {
   timestamp: number;
 }
 
+interface Lesson {
+  id: string;
+  title: string;
+  description: string;
+  videoUrl: string;
+  duration: number;
+}
+
+// Form validation
+const validateForm = (data: CourseFormData): string[] => {
+  const errors: string[] = [];
+  
+  if (data.price < 0) {
+    errors.push('Price cannot be negative');
+  }
+
+  if (!data.category) {
+    errors.push('Category is required');
+  }
+
+  if (!data.level) {
+    errors.push('Level is required');
+  }
+  
+  return errors;
+};
+
 // Main Component
 export default function ManageCoursePage() {
-  const { user } = useAuth();
-  const { loading, createCourse, updateCourse, deleteCourse, getCoursesByInstructor } = useCourseContext();
+  const { user, loginWithCredentials } = useAuth();
+  const { loading, createCourse, updateCourse, deleteCourse, getCoursesByInstructor, error: contextError } = useCourseContext();
+
+  // Demo login functionality for testing
+  const handleDemoLogin = async (username: string, password: string) => {
+    const result = await loginWithCredentials(username, password);
+    if (result.success) {
+      showNotification('success', `Logged in as ${username}`);
+    } else {
+      showNotification('error', result.error || 'Login failed');
+    }
+  };
 
   // Local state
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -39,6 +78,7 @@ export default function ManageCoursePage() {
   const [deletingCourse, setDeletingCourse] = useState<Course | null>(null);
   const [selectedCourseForLessons, setSelectedCourseForLessons] = useState<Course | null>(null);
   const [notification, setNotification] = useState<NotificationData | null>(null);
+  const [formErrors, setFormErrors] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState<CourseFormData>({
     title: '',
@@ -72,7 +112,9 @@ export default function ManageCoursePage() {
   // Get teacher's courses
   const courses = useMemo(() => {
     if (!user?.id) return [];
-    return getCoursesByInstructor(user.id.toString());
+    const teacherCourses = getCoursesByInstructor(user.id.toString());
+    console.log('Teacher courses:', teacherCourses);
+    return teacherCourses;
   }, [getCoursesByInstructor, user?.id]);
 
   // Calculate stats
@@ -98,7 +140,17 @@ export default function ManageCoursePage() {
   // Form handlers
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate form
+    const errors = validateForm(formData);
+    if (errors.length > 0) {
+      setFormErrors(errors);
+      showNotification('error', 'Please fix the form errors before submitting');
+      return;
+    }
+    
     setSubmitting(true);
+    setFormErrors([]);
     
     try {
       const result = await createCourse(formData);
@@ -107,11 +159,14 @@ export default function ManageCoursePage() {
         setShowCreateForm(false);
         resetForm();
       } else {
+        setFormErrors(['Failed to create course. Please try again.']);
         showNotification('error', 'Failed to create course');
       }
     } catch (error) {
       console.error('Error creating course:', error);
-      showNotification('error', 'An error occurred while creating the course');
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred while creating the course';
+      setFormErrors([errorMessage]);
+      showNotification('error', errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -121,7 +176,16 @@ export default function ManageCoursePage() {
     e.preventDefault();
     if (!editingCourse) return;
     
+    // Validate form
+    const errors = validateForm(formData);
+    if (errors.length > 0) {
+      setFormErrors(errors);
+      showNotification('error', 'Please fix the form errors before submitting');
+      return;
+    }
+    
     setSubmitting(true);
+    setFormErrors([]);
     
     try {
       const result = await updateCourse(editingCourse.id, formData);
@@ -130,11 +194,14 @@ export default function ManageCoursePage() {
         setEditingCourse(null);
         resetForm();
       } else {
+        setFormErrors(['Failed to update course. Please try again.']);
         showNotification('error', 'Failed to update course');
       }
     } catch (error) {
       console.error('Error updating course:', error);
-      showNotification('error', 'An error occurred while updating the course');
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred while updating the course';
+      setFormErrors([errorMessage]);
+      showNotification('error', errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -143,17 +210,25 @@ export default function ManageCoursePage() {
   const handleDeleteConfirm = async () => {
     if (!deletingCourse) return;
     
+    setSubmitting(true);
+    setFormErrors([]);
+    
     try {
       const success = await deleteCourse(deletingCourse.id);
       if (success) {
         showNotification('success', 'Course deleted successfully from database!');
         setDeletingCourse(null);
       } else {
+        setFormErrors(['Failed to delete course. Please try again.']);
         showNotification('error', 'Failed to delete course');
       }
     } catch (error) {
       console.error('Error deleting course:', error);
-      showNotification('error', 'An error occurred while deleting the course');
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred while deleting the course';
+      setFormErrors([errorMessage]);
+      showNotification('error', errorMessage);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -175,6 +250,7 @@ export default function ManageCoursePage() {
       totalDurationHours: 1
     });
     setTagInput('');
+    setFormErrors([]);
   };
 
   const openCreateForm = () => {
@@ -185,20 +261,19 @@ export default function ManageCoursePage() {
   const openEditForm = (course: Course) => {
     setFormData({
       title: course.title,
-      description: course.description,
-      thumbnailUrl: course.thumbnailUrl,
+      description: course.description || '',
+      thumbnailUrl: course.thumbnailUrl || '',
       youtubeEmbedUrl: course.youtubeEmbedUrl || '',
       youtubeVideoId: course.youtubeVideoId || '',
       youtubeThumbnailUrl: course.youtubeThumbnailUrl || '',
       category: course.category,
-      level: course.level as 'Pemula' | 'Menengah' | 'Lanjutan',
+      level: (course.level as "Pemula" | "Menengah" | "Lanjutan") || "Pemula",
       price: typeof course.price === 'number' ? course.price : 0,
-      published: course.published,
-      tags: course.tags,
+      published: course.published || false,
+      tags: course.tags || [],
       lessonsCount: course.lessonsCount,
       totalDurationHours: course.totalDurationHours
     });
-    setTagInput('');
     setEditingCourse(course);
   };
 
@@ -210,7 +285,7 @@ export default function ManageCoursePage() {
 
   // Tag helpers
   const addTag = () => {
-    const tag = tagInput.trim();
+    const tag = tagInput.trim().toLowerCase();
     if (tag && !formData.tags.includes(tag)) {
       setFormData(prev => ({
         ...prev,
@@ -227,6 +302,43 @@ export default function ManageCoursePage() {
     }));
   };
 
+  // YouTube video handling
+  const handleYouTubeUrlChange = (url: string) => {
+    const validation = validateYouTubeUrl(url);
+    
+    if (validation.isValid && validation.videoId) {
+      setFormData(prev => ({
+        ...prev,
+        youtubeEmbedUrl: getYouTubeEmbedUrl(validation.videoId!),
+        youtubeVideoId: validation.videoId!,
+        youtubeThumbnailUrl: getProperThumbnailUrl(validation.videoId!)
+      }));
+      setFormErrors(prev => prev.filter(error => !error.includes('YouTube')));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        youtubeEmbedUrl: '',
+        youtubeVideoId: '',
+        youtubeThumbnailUrl: ''
+      }));
+      if (url.trim()) {
+        setFormErrors(prev => [...prev.filter(error => !error.includes('YouTube')), validation.error || 'Invalid YouTube URL']);
+      }
+    }
+  };
+
+  // Lesson management
+  const handleLessonsChange = (lessons: Lesson[]) => {
+    if (!selectedCourseForLessons) return;
+
+    setFormData(prev => ({
+      ...prev,
+      lessonsCount: lessons.length,
+      totalDurationHours: lessons.reduce((total, lesson) => total + lesson.duration / 60, 0)
+    }));
+  };
+
+  // Loading state
   if (loading) {
     return (
       <div className="space-y-10 p-4 sm:p-6 lg:p-8">
@@ -243,6 +355,32 @@ export default function ManageCoursePage() {
           {[...Array(6)].map((_, i) => (
             <div key={i} className="h-80 bg-gray-200 dark:bg-neutral-700 rounded-xl animate-pulse"></div>
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (contextError || formErrors.length > 0) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <div className="flex">
+            <ExclamationTriangleIcon className="h-5 w-5 text-red-400 dark:text-red-500" />
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
+                Error
+              </h3>
+              <div className="mt-2 text-sm text-red-700 dark:text-red-300">
+                <ul className="list-disc pl-5 space-y-1">
+                  {contextError && <li>{contextError}</li>}
+                  {formErrors.map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -272,11 +410,9 @@ export default function ManageCoursePage() {
 
         {/* Lesson Manager */}
         <LessonManager 
-          courseId={selectedCourseForLessons.id}
-          onLessonsChange={(lessons) => {
-            // Update course metadata when lessons change
-            console.log(`Course ${selectedCourseForLessons.id} now has ${lessons.length} lessons`);
-          }}
+          key={selectedCourseForLessons.id}
+          course={selectedCourseForLessons}
+          onClose={() => setSelectedCourseForLessons(null)}
         />
       </div>
     );
@@ -325,8 +461,46 @@ export default function ManageCoursePage() {
         </div>
       </header>
 
+      {/* Demo Login Section */}
+      {!user && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-8">
+          <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-3">
+            🔐 Demo Login (For Testing)
+          </h3>
+          <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-4">
+            Please log in with a demo account to test course creation:
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => handleDemoLogin('dani', '123')}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors"
+            >
+              Login as ADMIN (dani)
+            </button>
+            <button
+              onClick={() => handleDemoLogin('teacher', 'password123')}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
+            >
+              Login as TEACHER
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Current User Info */}
+      {user && (
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-8">
+          <h3 className="text-lg font-semibold text-green-800 dark:text-green-200 mb-2">
+            ✅ Logged in as: {user.name || user.username}
+          </h3>
+          <p className="text-sm text-green-700 dark:text-green-300">
+            Role: <span className="font-medium">{user.role}</span> • ID: {user.id}
+          </p>
+        </div>
+      )}
+
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+      {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         <div className="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -373,7 +547,7 @@ export default function ManageCoursePage() {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Course Grid */}
       {courses.length === 0 ? (
@@ -395,8 +569,8 @@ export default function ManageCoursePage() {
           {courses.map((course) => (
             <div key={course.id} className="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg overflow-hidden">
               <div className="relative h-48">
-                <Image
-                  src={getProperThumbnailUrl(course.thumbnailUrl)}
+                <SafeImage
+                  src={course.thumbnailUrl || course.youtubeThumbnailUrl || getProperThumbnailUrl(course.youtubeEmbedUrl || '') || '/images/course-placeholder.svg'}
                   alt={course.title}
                   fill
                   className="object-cover"
@@ -697,4 +871,4 @@ export default function ManageCoursePage() {
       )}
     </div>
   );
-} 
+}

@@ -8,7 +8,8 @@ import {
   ClockIcon, StarIcon, ChartBarIcon, XMarkIcon, CheckIcon, ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCourseContext, Course, CourseFormData } from '@/contexts/CourseContext';
+import { useCourseContext, CourseFormData } from '@/contexts/CourseContext';
+import { Course } from '@/lib/types';
 import { getProperThumbnailUrl } from '@/lib/utils/youtube';
 
 // Types
@@ -182,16 +183,16 @@ export default function CourseManagementContextIntegrated() {
   const openEditForm = (course: Course) => {
     setFormData({
       title: course.title,
-      description: course.description,
-      thumbnailUrl: course.thumbnailUrl,
+      description: course.description || '',
+      thumbnailUrl: course.thumbnailUrl || '',
       youtubeEmbedUrl: course.youtubeEmbedUrl || '',
       youtubeVideoId: course.youtubeVideoId || '',
       youtubeThumbnailUrl: course.youtubeThumbnailUrl || '',
       category: course.category,
       level: course.level as 'Pemula' | 'Menengah' | 'Lanjutan',
       price: typeof course.price === 'number' ? course.price : 0,
-      published: course.published,
-      tags: course.tags,
+      published: course.published || false,
+      tags: course.tags || [],
       lessonsCount: course.lessonsCount,
       totalDurationHours: course.totalDurationHours
     });
@@ -359,7 +360,7 @@ export default function CourseManagementContextIntegrated() {
             <div key={course.id} className="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl shadow-lg overflow-hidden">
               <div className="relative h-48">
                 <Image
-                  src={getProperThumbnailUrl(course.thumbnailUrl)}
+                  src={getProperThumbnailUrl(course.thumbnailUrl || '')}
                   alt={course.title}
                   fill
                   className="object-cover"

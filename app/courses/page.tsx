@@ -1,33 +1,98 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { CourseDisplayCard } from '@/app/courses/CourseDisplayCard';
 import { MagnifyingGlassIcon, AdjustmentsHorizontalIcon, ChevronDownIcon, FunnelIcon, XMarkIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 import { BookOpenIcon as NoCourseIcon } from '@heroicons/react/24/solid';
-import { useCourseContext } from '@/contexts/CourseContext';
-
+import { Course } from '@/lib/types';
+import { apiClient } from '@/lib/utils/apiUtils';
 
 const courseCategories = ["Semua Kategori", "Web Development", "Data Science", "UI/UX Design", "Digital Marketing", "Bahasa", "Manajemen", "Bisnis"];
 const courseLevels = ["Semua Level", "Pemula", "Menengah", "Lanjutan"];
-
 
 export default function CoursesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua Kategori");
   const [selectedLevel, setSelectedLevel] = useState("Semua Level");
   const [showFilters, setShowFilters] = useState(false);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Use course context instead of local state
-  const { loading, getPublishedCourses } = useCourseContext();
+  // Fetch courses from backend API with retry logic
+  const fetchCourses = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('🔄 Fetching courses from API...');
+      const data = await apiClient.get('/courses');
+      console.log('✅ Fetched courses from API:', data);
 
-  // Only show published courses to public - memoized to prevent unnecessary re-calculations
-  const courses = useMemo(() => getPublishedCourses(), [getPublishedCourses]);
+      // Transform backend data to frontend Course interface
+      const transformedCourses: Course[] = data.map((course: any) => ({
+        id: course.id?.toString() || '',
+        slug: course.slug || course.id?.toString() || '',
+        title: course.title || 'Untitled Course',
+        description: course.description || '',
+        thumbnailUrl: course.thumbnailUrl || course.youtubeThumbnailUrl || '/images/course-placeholder.svg',
+        instructorName: course.instructor?.name || course.instructorName || 'Unknown Instructor',
+        instructorAvatarUrl: course.instructor?.avatarUrl || course.instructorAvatarUrl,
+        instructorId: course.instructorId?.toString() || course.instructor?.id?.toString(),
+        category: course.category || 'Uncategorized',
+        lessonsCount: course.lessonsCount || course._count?.lessons || 0,
+        totalDurationHours: course.totalDurationHours || 0,
+        level: course.level || 'Pemula',
+        rating: course.rating || 0,
+        studentsEnrolled: course.studentsEnrolled || course._count?.enrollments || 0,
+        price: course.price || 0,
+        courseUrl: `/courses/${course.slug || course.id}`,
+        isNew: course.isNew || false,
+        published: course.published || true, // Only published courses from this endpoint
+        tags: course.tags || [],
+        youtubeEmbedUrl: course.youtubeEmbedUrl || '',
+        youtubeVideoId: course.youtubeVideoId || '',
+        youtubeThumbnailUrl: course.youtubeThumbnailUrl || '',
+        createdAt: course.createdAt,
+        updatedAt: course.updatedAt,
+      }));
+
+      setCourses(transformedCourses);
+      console.log('✅ Transformed courses:', transformedCourses);
+    } catch (err) {
+      console.error('❌ Error fetching courses:', err);
+      
+      // Handle different error types
+      let errorMessage = 'Failed to load courses';
+      
+      if (err instanceof Error) {
+        if (err.message.includes('429')) {
+          errorMessage = 'Server is busy. Please wait a moment and try again.';
+        } else if (err.message.includes('500') || err.message.includes('502') || err.message.includes('503')) {
+          errorMessage = 'Server is temporarily unavailable. Please try again later.';
+        } else if (err.message.includes('Network')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCourses();
+  }, []);
 
   const filteredCourses = useMemo(() => {
     return courses
       .filter(course =>
         course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         course.instructorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (course.tags && course.tags.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase())))
       )
       .filter(course =>
@@ -130,7 +195,27 @@ export default function CoursesPage() {
       {loading ? (
         <div className="text-center py-16">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-purple mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-neutral-400">Memuat kursus...</p>
+          <p className="mt-4 text-gray-600 dark:text-neutral-400">
+            Memuat kursus dari server...
+          </p>
+          <p className="mt-2 text-sm text-gray-500 dark:text-neutral-500">
+            Mohon tunggu sebentar jika server sedang sibuk
+          </p>
+        </div>
+      ) : error ? (
+        <div className="text-center py-16">
+          <NoCourseIcon className="mx-auto h-20 w-20 text-red-300 dark:text-red-700" />
+          <h3 className="mt-4 text-2xl font-semibold text-gray-900 dark:text-neutral-200">Gagal Memuat Kursus</h3>
+          <p className="mt-2 text-base text-gray-500 dark:text-neutral-400">
+            {error}
+          </p>
+          <button
+            onClick={fetchCourses}
+            disabled={loading}
+            className="mt-6 px-5 py-2.5 border border-transparent text-sm font-medium rounded-md text-white bg-brand-purple hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:focus:ring-offset-neutral-900 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Mencoba Lagi...' : 'Coba Lagi'}
+          </button>
         </div>
       ) : filteredCourses.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-x-6 gap-y-10">
@@ -138,12 +223,20 @@ export default function CoursesPage() {
             <CourseDisplayCard key={course.id} course={course} />
           ))}
         </div>
+      ) : courses.length === 0 ? (
+        <div className="text-center py-16">
+          <NoCourseIcon className="mx-auto h-20 w-20 text-gray-300 dark:text-neutral-700" />
+          <h3 className="mt-4 text-2xl font-semibold text-gray-900 dark:text-neutral-200">Belum Ada Kursus</h3>
+          <p className="mt-2 text-base text-gray-500 dark:text-neutral-400">
+            Belum ada kursus yang dipublikasikan saat ini. Silakan kembali lagi nanti.
+          </p>
+        </div>
       ) : (
         <div className="text-center py-16">
           <NoCourseIcon className="mx-auto h-20 w-20 text-gray-300 dark:text-neutral-700" />
-          <h3 className="mt-4 text-2xl font-semibold text-gray-900 dark:text-neutral-200">Oops! Kursus Tidak Ditemukan</h3>
+          <h3 className="mt-4 text-2xl font-semibold text-gray-900 dark:text-neutral-200">Kursus Tidak Ditemukan</h3>
           <p className="mt-2 text-base text-gray-500 dark:text-neutral-400">
-            Kami tidak dapat menemukan kursus yang cocok dengan pencarian Anda. Coba kata kunci atau filter lain.
+            Tidak ada kursus yang cocok dengan filter pencarian Anda. Coba kata kunci atau filter lain.
           </p>
            <button
                 onClick={() => {

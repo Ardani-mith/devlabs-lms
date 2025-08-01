@@ -1,17 +1,17 @@
 "use client";
 
 import { Fragment } from 'react';
-import { MagnifyingGlassIcon, BellIcon, UserCircleIcon, HeartIcon } from '@heroicons/react/24/outline';
-import { Menu, Transition } from '@headlessui/react'; // Contoh untuk dropdown user
+import { MagnifyingGlassIcon, BellIcon, UserCircleIcon, HeartIcon, Bars3Icon } from '@heroicons/react/24/outline';
+import { Menu, Transition } from '@headlessui/react';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { useAuth } from '@/contexts/AuthContext';
+import { useSidebar } from '@/contexts/SidebarContext';
 import Image from 'next/image';
 import Link from 'next/link';
-// Aceternity UI mungkin memiliki komponen "Navbar" atau "Header" yang bisa diadaptasi.
 
 export function Header() {
-  // Logika untuk search, notifikasi, user info
-  const { user, logout } = useAuth(); // Dapatkan user data dan logout function
+  const { user, logout } = useAuth();
+  const { toggle, isCollapsed } = useSidebar();
   
   const handleLogout = () => {
     logout();
@@ -19,8 +19,17 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 flex h-20 flex-shrink-0 items-center justify-between border-b border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
-      {/* Search (hanya tampil di tampilan lebih besar, atau bisa jadi tombol di mobile) */}
+      {/* Left Section - Sidebar Toggle & Search */}
       <div className="flex flex-1 items-center">
+        {/* Desktop Sidebar Toggle */}
+        <button
+          onClick={toggle}
+          className="hidden lg:flex p-2 rounded-lg text-gray-400 dark:text-neutral-400 hover:text-gray-600 dark:hover:text-neutral-300 hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors duration-200 mr-4"
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <Bars3Icon className="h-6 w-6" />
+        </button>
+        
         <form className="relative hidden w-full md:block md:max-w-md lg:max-w-lg" action="#" method="GET">
           <label htmlFor="search-field" className="sr-only">
             Search
@@ -37,21 +46,33 @@ export function Header() {
             name="search"
           />
         </form>
-      </div>
-
-      {/* Right Section: Activate Button, Notifications, User Menu */}
-      <div className="ml-4 flex items-center md:ml-6 space-x-4">
+        
+        {/* Mobile search button */}
         <button
           type="button"
-          className="rounded-md bg-brand-purple px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-purple-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple transition-colors"
+          className="md:hidden p-2 rounded-lg text-gray-400 dark:text-neutral-400 hover:text-gray-500 dark:hover:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-brand-purple focus:ring-offset-2 dark:focus:ring-offset-neutral-800"
+        >
+          <MagnifyingGlassIcon className="h-6 w-6" aria-hidden="true" />
+          <span className="sr-only">Search</span>
+        </button>
+      </div>
+
+      {/* Right Section: Buttons, Notifications, User Menu */}
+      <div className="ml-4 flex items-center md:ml-6 space-x-2 md:space-x-4">
+        {/* Activate Button - Hidden on small screens */}
+        <button
+          type="button"
+          className="hidden sm:inline-flex rounded-md bg-brand-purple px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-purple-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple transition-colors"
         >
           Activate teacher account
         </button>
 
+        {/* Heart Button */}
         <button className="relative rounded-full p-1 text-gray-400 dark:text-neutral-400 hover:text-gray-500 dark:hover:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-brand-purple focus:ring-offset-2 dark:focus:ring-offset-neutral-800">
             <HeartIcon className="h-6 w-6" aria-hidden="true" />
         </button>
 
+        {/* Notifications Button */}
         <button
           type="button"
           className="relative rounded-full p-1 text-gray-400 dark:text-neutral-400 hover:text-gray-500 dark:hover:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-brand-purple focus:ring-offset-2 dark:focus:ring-offset-neutral-800"
@@ -70,18 +91,26 @@ export function Header() {
               <span className="absolute -inset-1.5" />
               <span className="sr-only">Open user menu</span>
               {/* Display user avatar if available, otherwise use default icon */}
-              {user?.avatarUrl ? (
+              {user?.avatarUrl && user.avatarUrl.startsWith('http') ? (
                 <Image
                   src={user.avatarUrl}
                   alt={user.name || user.username}
                   width={32}
                   height={32}
                   className="h-8 w-8 rounded-full object-cover"
+                  onError={(e) => {
+                    // Fallback to default icon if image fails to load
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const fallbackIcon = document.createElement('div');
+                    fallbackIcon.innerHTML = `<svg class="h-8 w-8 rounded-full text-gray-400 dark:text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>`;
+                    target.parentNode?.insertBefore(fallbackIcon.firstChild!, target);
+                  }}
                 />
               ) : (
                 <UserCircleIcon className="h-8 w-8 rounded-full text-gray-400 dark:text-neutral-400" />
               )}
-              <ChevronDownIcon className="ml-1 h-5 w-5 text-gray-400 dark:text-neutral-400" aria-hidden="true" />
+              <ChevronDownIcon className="ml-1 h-5 w-5 text-gray-400 dark:text-neutral-400 hidden sm:block" aria-hidden="true" />
             </Menu.Button>
           </div>
           <Transition

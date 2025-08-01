@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
+import SafeImage from '@/components/ui/SafeImage';
 import Link from 'next/link';
 import {
   PlusIcon,
@@ -428,7 +428,7 @@ export default function TeacherCourseManager() {
           {courses.map((course) => (
             <div key={course.id} className="relative flex flex-col bg-white dark:bg-transparent border border-gray-200 dark:border-transparent rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 ease-in-out transform hover:-translate-y-1.5 overflow-hidden h-full">
               <div className="relative w-full h-48 sm:h-52">
-                <Image
+                <SafeImage
                   src={course.thumbnailUrl?.includes('i.pinimg.com') 
                     ? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=600&fit=crop'
                     : course.thumbnailUrl

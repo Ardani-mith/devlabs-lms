@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, use } from "react";
-import Image from "next/image";
+import React, { useState, useEffect, useMemo, useCallback, use } from "react";
+import SafeImage from "@/components/ui/SafeImage";
 import Link from "next/link";
 import {
   StarIcon as StarIconSolid,
@@ -19,17 +19,55 @@ import {
   ShieldCheckIcon,
   HandThumbUpIcon,
   ChevronLeftIcon,
+  EyeIcon,
+  LockClosedIcon,
+  PlayCircleIcon,
 } from "@heroicons/react/24/solid";
 import { ChatBubbleOvalLeftEllipsisIcon } from "@heroicons/react/24/outline";
 
 // Import components and utilities
 import CourseHeader from "./components/CourseHeader";
-import CourseTabs from "./components/CourseTabs";
-import ModuleAccordion from "./components/ModuleAccordion";
 import CourseInfoSidebar from "./components/CourseInfoSidebar";
-import { CourseDetail, DiscussionComment, Lesson } from "./types/course";
-import { getLessonNavigation } from "./utils/courseHelpers";
-import { layoutStyles, cardStyles, textStyles, buttonStyles } from "./utils/styles";
+import { CourseTabs, ModuleAccordion } from "./CourseComponents";
+import { CourseDetail, DiscussionComment, Lesson } from "@/lib/types";
+import { getLessonNavigation } from "@/lib/utils/courseHelpers";
+import { getTestEnrollmentData, generateLessonStatuses, type TestEnrollmentData } from "@/lib/utils/testEnrollment";
+import TestControlPanel from "@/components/dev/TestControlPanel";
+import DebugConsole from "@/components/dev/DebugConsole";
+
+// Inline styles to replace the removed styles file
+const layoutStyles = {
+  container: "max-w-7xl mx-auto py-8 sm:py-12 px-4 sm:px-6 lg:px-8",
+  grid: "lg:grid lg:grid-cols-12 lg:gap-x-8 xl:gap-x-12 items-start",
+  contentArea: "lg:col-span-8 xl:col-span-8 min-w-0 space-y-8 mb-8 lg:mb-0",
+  sidebarArea: "hidden lg:block lg:col-span-4 xl:col-span-4 relative",
+} as const;
+
+const cardStyles = {
+  main: "bg-white dark:bg-neutral-800/90 rounded-2xl shadow-xl border border-gray-200 dark:border-neutral-700/70",
+  content: "p-6 sm:p-8",
+  section: "space-y-10",
+  sidebar: "sticky top-[calc(var(--header-height,4rem)+2rem)] space-y-6",
+} as const;
+
+const textStyles = {
+  heading: {
+    h1: "text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight mb-3",
+    h2: "text-2xl sm:text-3xl font-bold text-gray-900 dark:text-neutral-100 mb-5",
+    h3: "text-xl sm:text-2xl font-semibold text-gray-800 dark:text-neutral-200 mb-4",
+  },
+  body: {
+    large: "text-lg text-gray-700 dark:text-neutral-300 leading-relaxed",
+    normal: "text-base text-gray-600 dark:text-neutral-400 leading-relaxed",
+    small: "text-sm text-gray-500 dark:text-neutral-500",
+  },
+} as const;
+
+const buttonStyles = {
+  primary: "px-8 py-3.5 bg-brand-purple text-white font-semibold rounded-lg hover:bg-purple-700 transition-all duration-300 shadow-lg transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-500/50",
+  secondary: "px-6 py-3 border-2 border-neutral-300 dark:border-neutral-600 text-base font-medium rounded-lg text-gray-700 dark:text-neutral-200 hover:bg-gray-100 dark:hover:bg-neutral-700/50 transition-colors focus:outline-none focus:ring-4 focus:ring-neutral-400/50",
+  success: "px-8 py-3.5 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-all duration-300 shadow-lg transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-green-500/50",
+} as const;
 
 // Backend response interfaces
 interface BackendLesson {
@@ -61,26 +99,74 @@ export default function CourseDetailPage({
   const { slug } = use(params);
 
   const [courseData, setCourseData] = useState<CourseDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("Overview");
   const [newComment, setNewComment] = useState("");
+  const [testEnrollmentData, setTestEnrollmentData] = useState<TestEnrollmentData>();
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
 
+  // Initialize test enrollment data on component mount
+  useEffect(() => {
+    const initialTestData = getTestEnrollmentData(slug);
+    setTestEnrollmentData(initialTestData);
+    console.log('Initial test enrollment data:', initialTestData);
+  }, [slug]);
+
+  // Computed properties that consider test enrollment data
+  const effectiveEnrollmentData = useMemo(() => {
+    if (process.env.NODE_ENV === 'development' && testEnrollmentData) {
+      return {
+        isEnrolled: testEnrollmentData.isEnrolled,
+        userProgress: testEnrollmentData.userProgress,
+        completedLessons: testEnrollmentData.completedLessons || [],
+      };
+    }
+    return {
+      isEnrolled: courseData?.isEnrolled || false,
+      userProgress: courseData?.userProgress || 0,
+      completedLessons: [],
+    };
+  }, [testEnrollmentData?.isEnrolled, testEnrollmentData?.userProgress, testEnrollmentData?.completedLessons, courseData?.isEnrolled, courseData?.userProgress]);
+
   const isCourseCompleted = useMemo(
-    () => courseData?.userProgress === 100,
-    [courseData?.userProgress]
+    () => effectiveEnrollmentData.userProgress === 100,
+    [effectiveEnrollmentData.userProgress]
   );
+
+  // Memoize the enrollment change handler to prevent re-renders
+  const handleEnrollmentChange = useCallback((data: TestEnrollmentData) => {
+    setTestEnrollmentData(data);
+    console.log('Test enrollment data changed:', data);
+  }, []);
 
   useEffect(() => {
     const fetchCourseData = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/courses/${slug}`);
-        if (response.ok) {
-          const courseData: BackendCourseData = await response.json();
-          // Convert API response to CourseDetail format
-          const convertedCourse: CourseDetail = {
+        setLoading(true);
+        setError(null);
+
+        // Fetch course data from backend API using correct endpoint
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/courses/${slug}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Course not found: ${response.status}`);
+        }
+
+        const courseData = await response.json();
+        console.log('Fetched course data from API:', courseData);
+
+        // Transform backend course data to CourseDetail interface
+        const convertedCourse: CourseDetail = {
             slug: (courseData as unknown as { slug: string }).slug,
             title: (courseData as unknown as { title: string }).title,
+            description: (courseData as unknown as { description: string }).description || 'Course description',
             tagline: (courseData as unknown as { description: string }).description,
             instructorName: (courseData as unknown as { instructor?: { name?: string } }).instructor?.name || 'Unknown Instructor',
             instructorAvatar: (courseData as unknown as { instructor?: { avatarUrl?: string } }).instructor?.avatarUrl,
@@ -94,8 +180,9 @@ export default function CourseDetailPage({
             rating: (courseData as unknown as { rating?: number }).rating || 4.5,
             reviewCount: (courseData as unknown as { reviewCount?: number }).reviewCount || 0,
             studentCount: (courseData as unknown as { studentsEnrolled?: number }).studentsEnrolled || 0,
+            studentsEnrolled: (courseData as unknown as { studentsEnrolled?: number }).studentsEnrolled || 0,
             userProgress: 0, // This would come from user progress API
-            isEnrolled: false, // This would come from user enrollment API
+            isEnrolled: (courseData as unknown as { isEnrolled?: boolean }).isEnrolled || false, // Check if user is enrolled
             lastAccessedLessonUrl: undefined,
             lastAccessedLessonTitle: undefined,
             price: (courseData as unknown as { price?: number }).price || 0,
@@ -110,40 +197,52 @@ export default function CourseDetailPage({
             totalLessons: (courseData as unknown as { lessonsCount?: number }).lessonsCount || 0,
             totalVideoHours: Math.floor(((courseData as unknown as { totalDurationHours?: number }).totalDurationHours || 1) * 0.8),
             totalDurationHours: (courseData as unknown as { totalDurationHours?: number }).totalDurationHours || 1,
+            estimatedHours: (courseData as unknown as { totalDurationHours?: number }).totalDurationHours || 1,
             hasCertificate: true,
             category: (courseData as unknown as { category?: string }).category || 'General',
-                         level: ((courseData as unknown as { level?: string }).level || 'Pemula') as "Pemula" | "Menengah" | "Lanjutan" | "Semua Level",
+            level: ((courseData as unknown as { level?: string }).level || 'Pemula') as "Pemula" | "Menengah" | "Lanjutan" | "Semua Level",
             updatedAt: (courseData as unknown as { updatedAt?: string }).updatedAt || new Date().toISOString(),
-            modules: courseData.modules?.map((module: BackendModule) => ({
+            lastUpdated: (courseData as unknown as { updatedAt?: string }).updatedAt || new Date().toISOString(),
+            modules: courseData.modules?.map((module: BackendModule, moduleIndex: number) => ({
               ...module,
               id: module.id.toString(),
-              lessons: module.lessons?.map((lesson: BackendLesson) => ({
-                id: lesson.id.toString(),
-                title: lesson.title,
-                type: "video" as const,
-                durationMinutes: lesson.duration ? Math.round(lesson.duration / 60) : undefined,
-                status: "selanjutnya" as const, // Default status
-                url: lesson.youtubeUrl || "#",
-                isPreviewable: false
-              })) || []
+              lessons: module.lessons?.map((lesson: BackendLesson, lessonIndex: number) => {
+                // Ensure lesson has valid ID
+                const lessonId = lesson.id ? lesson.id.toString() : `temp_${moduleIndex}_${lessonIndex}`;
+                
+                console.log(`Processing lesson: ${lesson.title}, ID: ${lessonId}`);
+                
+                return {
+                  id: lessonId,
+                  title: lesson.title,
+                  type: "video" as const,
+                  durationMinutes: lesson.duration ? Math.round(lesson.duration / 60) : undefined,
+                  status: "selanjutnya" as const, // Default status
+                  url: lesson.youtubeUrl || "#",
+                  videoUrl: lesson.youtubeUrl || "",
+                  // First lesson of first module is always previewable, plus random preview lessons
+                  isPreviewable: (moduleIndex === 0 && lessonIndex === 0) || Math.random() > 0.7
+                };
+              }).filter(lesson => lesson.id !== null && lesson.id !== 'undefined') || [] // Filter out invalid lessons
             })) || [],
             discussions: [],
             faq: [],
             certificateUrl: `/certificates/${(courseData as unknown as { slug: string }).slug}`,
-            relatedCourses: []
+            relatedCourses: courseData.relatedCourses || []
           };
-          setCourseData(convertedCourse);
-        } else {
-          setCourseData(null);
-        }
-      } catch (error) {
-        console.error('Error fetching course data:', error);
-        setCourseData(null);
-      }
-    };
 
-    fetchCourseData();
-  }, [slug]);
+          setCourseData(convertedCourse);
+        } catch (error) {
+          console.error('Error fetching course:', error);
+          setError(error instanceof Error ? error.message : 'Failed to fetch course');
+          setCourseData(null);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchCourseData();
+    }, [slug]);
 
   const handleCommentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,11 +264,9 @@ export default function CourseDetailPage({
       text: newComment,
       likes: 0,
       replies: [],
-    };
-    
-    setCourseData((prev) =>
-      prev ? { ...prev, discussions: [comment, ...prev.discussions] } : null
-    );
+    };        setCourseData((prev: CourseDetail | null) =>
+          prev ? { ...prev, discussions: [comment, ...(prev.discussions || [])] } : null
+        );
     setNewComment("");
   };
 
@@ -217,6 +314,48 @@ export default function CourseDetailPage({
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-var(--header-height,8rem))] p-8 text-center bg-gray-50 dark:bg-neutral-900">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-brand-purple mb-6"></div>
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-neutral-200">
+          Memuat Kursus...
+        </h1>
+        <p className="text-gray-500 dark:text-neutral-400 mt-3">
+          Sedang mengambil data kursus dari server.
+        </p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-var(--header-height,8rem))] p-8 text-center bg-gray-50 dark:bg-neutral-900">
+        <BookOpenIcon className="h-28 w-28 text-red-300 dark:text-red-700 mb-6" />
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-neutral-200">
+          Kursus Tidak Ditemukan
+        </h1>
+        <p className="text-gray-500 dark:text-neutral-400 mt-3">
+          {error}
+        </p>
+        <div className="flex gap-4 mt-8">
+          <button
+            onClick={() => window.location.reload()}
+            className="px-7 py-3 bg-gray-600 text-white font-semibold text-sm rounded-lg hover:bg-gray-700 transition-colors shadow-md"
+          >
+            Coba Lagi
+          </button>
+          <Link
+            href="/courses"
+            className="px-7 py-3 bg-brand-purple text-white font-semibold text-sm rounded-lg hover:bg-purple-700 transition-colors shadow-md"
+          >
+            Kembali ke Daftar Kursus
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (!courseData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-var(--header-height,8rem))] p-8 text-center bg-gray-50 dark:bg-neutral-900">
@@ -239,14 +378,13 @@ export default function CourseDetailPage({
 
   return (
     <div className="bg-gray-50 dark:bg-neutral-900 text-text-light-primary dark:text-text-dark-primary">
-      <CourseHeader course={courseData} />
-      <CourseTabs
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        hasCertificate={courseData.hasCertificate}
-        isEnrolled={courseData.isEnrolled}
-        isCourseCompleted={isCourseCompleted}
-      />
+      <CourseHeader course={courseData} testEnrollmentData={testEnrollmentData} />        <CourseTabs
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          hasCertificate={courseData.hasCertificate ?? false}
+          isEnrolled={effectiveEnrollmentData.isEnrolled}
+          isCourseCompleted={isCourseCompleted}
+        />
 
       <div className={layoutStyles.container}>
         <div className={layoutStyles.grid}>
@@ -263,7 +401,7 @@ export default function CourseDetailPage({
                 <section id="what-you-will-learn" className="pt-8 border-t border-gray-200 dark:border-neutral-700/70">
                   <h3 className={textStyles.heading.h2}>Apa yang akan Anda Pelajari?</h3>
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                    {courseData.whatYouWillLearn.map((obj, i) => (
+                    {courseData.whatYouWillLearn?.map((obj: string, i: number) => (
                       <li key={i} className="flex items-start text-gray-700 dark:text-neutral-300 text-sm sm:text-base">
                         <CheckCircleIconSolid className="h-6 w-6 text-green-500 dark:text-green-400 mr-3 mt-0.5 flex-shrink-0" />
                         <span>{obj}</span>
@@ -306,7 +444,7 @@ export default function CourseDetailPage({
                       Untuk Siapa Kursus Ini?
                     </h3>
                     <ul className="space-y-2 text-gray-700 dark:text-neutral-300 text-sm">
-                      {courseData.targetAudience.map((aud, i) => (
+                      {courseData.targetAudience?.map((aud: string, i: number) => (
                         <li key={i} className="flex items-start">
                           <ChevronRightIcon className="h-5 w-5 text-blue-400 mr-1.5 mt-0.5 flex-shrink-0" />
                           {aud}
@@ -321,7 +459,7 @@ export default function CourseDetailPage({
                       Prasyarat Kursus
                     </h3>
                     <ul className="space-y-2 text-gray-700 dark:text-neutral-300 text-sm">
-                      {courseData.prerequisites.map((pre, i) => (
+                      {courseData.prerequisites?.map((pre: string, i: number) => (
                         <li key={i} className="flex items-start">
                           <ChevronRightIcon className="h-5 w-5 text-orange-400 mr-1.5 mt-0.5 flex-shrink-0" />
                           {pre}
@@ -336,7 +474,7 @@ export default function CourseDetailPage({
                   <h2 className={textStyles.heading.h2}>Tentang Pengajar</h2>
                   <div className="flex flex-col md:flex-row items-start gap-6 p-6 bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 dark:from-neutral-800/50 dark:via-neutral-700/80 dark:to-neutral-800/50 rounded-xl shadow-lg border border-gray-200 dark:border-neutral-700">
                     {courseData.instructorAvatar && (
-                      <Image
+                      <SafeImage
                         src={courseData.instructorAvatar}
                         alt={courseData.instructorName}
                         width={150}
@@ -385,6 +523,62 @@ export default function CourseDetailPage({
 
             {activeTab === "Materi Pembelajaran" && (
               <div className="space-y-6">
+                {/* Info banner for non-enrolled users */}
+                {!effectiveEnrollmentData.isEnrolled && (
+                  <div className="bg-gradient-to-r from-brand-purple/10 to-purple-600/10 dark:from-purple-900/20 dark:to-purple-800/20 border border-brand-purple/20 dark:border-purple-600/30 rounded-2xl p-6">
+                    <div className="flex items-start space-x-4">
+                      <div className="flex-shrink-0">
+                        <BookOpenIcon className="h-8 w-8 text-brand-purple dark:text-purple-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-neutral-100 mb-2">
+                          Preview Kurikulum Kursus
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-neutral-300 mb-4">
+                          Beberapa materi tersedia untuk preview. Daftar untuk mengakses semua konten lengkap, 
+                          termasuk video pembelajaran, latihan, dan sertifikat kelulusan.
+                        </p>
+                        <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-neutral-400">
+                          <div className="flex items-center space-x-1">
+                            <EyeIcon className="h-4 w-4 text-green-500" />
+                            <span>Preview tersedia</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <LockClosedIcon className="h-4 w-4 text-gray-400" />
+                            <span>Perlu daftar</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Progress banner for enrolled users */}
+                {effectiveEnrollmentData.isEnrolled && effectiveEnrollmentData.userProgress > 0 && (
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-6">
+                    <div className="flex items-start space-x-4">
+                      <div className="flex-shrink-0">
+                        <PlayCircleIcon className="h-8 w-8 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-neutral-100 mb-2">
+                          Progress Pembelajaran Anda
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-neutral-300 mb-3">
+                          Anda telah menyelesaikan {effectiveEnrollmentData.completedLessons.length} dari {courseData.totalLessons} pelajaran 
+                          ({effectiveEnrollmentData.userProgress}% selesai)
+                        </p>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div 
+                            className="bg-green-600 dark:bg-green-500 h-2 rounded-full transition-all duration-300" 
+                            style={{ width: `${effectiveEnrollmentData.userProgress}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 <div className={`${cardStyles.main} ${cardStyles.content} flex flex-col sm:flex-row justify-between items-start sm:items-center`}>
                   <h2 className={`${textStyles.heading.h2} mb-2 sm:mb-0`}>Kurikulum Kursus</h2>
                   <div className="text-right flex-shrink-0">
@@ -402,6 +596,7 @@ export default function CourseDetailPage({
                     module={mod}
                     courseSlug={slug}
                     initialCollapsed={mod.isCollapsedInitially}
+                    isEnrolled={effectiveEnrollmentData.isEnrolled}
                   />
                 ))}
               </div>
@@ -436,11 +631,11 @@ export default function CourseDetailPage({
                 </form>
 
                 <div className="space-y-8">
-                  {courseData.discussions.length > 0 ? (
-                    courseData.discussions.map((comment) => (
+                  {(courseData.discussions?.length ?? 0) > 0 ? (
+                    courseData.discussions?.map((comment: DiscussionComment) => (
                       <div key={comment.id} className="flex items-start space-x-4 p-1">
                         {comment.userAvatar ? (
-                          <Image
+                          <SafeImage
                             src={comment.userAvatar}
                             alt={comment.userName}
                             width={48}
@@ -525,7 +720,7 @@ export default function CourseDetailPage({
                 ) : courseData.hasCertificate ? (
                   <p className="text-gray-600 dark:text-neutral-400 mt-2 max-w-md mx-auto">
                     Selesaikan{" "}
-                    <span className="font-semibold">{100 - courseData.userProgress}%</span>{" "}
+                    <span className="font-semibold">{100 - (courseData.userProgress ?? 0)}%</span>{" "}
                     sisa materi kursus untuk membuka dan mengunduh sertifikat kelulusan Anda.
                   </p>
                 ) : (
@@ -548,8 +743,8 @@ export default function CourseDetailPage({
                       className={`group block ${cardStyles.main} p-4 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1`}
                     >
                       <div className="relative w-full h-36 sm:h-40 rounded-lg overflow-hidden mb-3">
-                        <Image
-                          src={related.thumbnailUrl}
+                        <SafeImage
+                          src={related.thumbnailUrl || '/placeholder-course.jpg'}
                           alt={related.title}
                           fill
                           sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
@@ -585,6 +780,7 @@ export default function CourseDetailPage({
             <CourseInfoSidebar
               courseData={courseData}
               isCourseCompleted={isCourseCompleted}
+              testEnrollmentData={testEnrollmentData}
             />
           </aside>
         </div>
@@ -607,7 +803,7 @@ export default function CourseDetailPage({
           <div className="flex gap-3">
             {activeLesson.status !== 'selesai' && (
               <button 
-                onClick={() => markLessonComplete(activeLesson.id)}
+                onClick={() => markLessonComplete(String(activeLesson.id))}
                 disabled={isMarkingComplete}
                 className="px-7 py-3 bg-green-600 rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-2 shadow-lg hover:shadow-green-500/30 disabled:opacity-50"
               >
@@ -642,6 +838,15 @@ export default function CourseDetailPage({
           </div>
         </div>
       )}
+
+      {/* Development Test Panel */}
+      <TestControlPanel 
+        courseSlug={slug} 
+        onEnrollmentChange={handleEnrollmentChange}
+      />
+      
+      {/* Debug Console Utilities */}
+      <DebugConsole courseSlug={slug} />
     </div>
   );
 } 

@@ -39,21 +39,19 @@ interface MessageData {
 // API function to fetch message data
 const fetchMessageData = async (userId: string): Promise<MessageData> => {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/messages/${userId}`, {
+    // TODO: Replace with real API call to backend
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/api/messages/user/${userId}`, {
+      method: 'GET',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
         'Content-Type': 'application/json',
       },
     });
 
-    if (response.ok) {
-      return await response.json();
-    } else {
-      return {
-        contacts: [],
-        messages: []
-      };
+    if (!response.ok) {
+      throw new Error(`Failed to fetch messages: ${response.status}`);
     }
+
+    return await response.json();
   } catch (error) {
     console.error('Messages API error:', error);
     return {

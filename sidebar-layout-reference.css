@@ -1,0 +1,44 @@
+/* Sidebar Layout CSS Values Reference */
+
+/* Tailwind CSS classes and their pixel values */
+
+/* Sidebar Widths */
+.w-16 { width: 4rem; /* 64px */ }
+.w-64 { width: 16rem; /* 256px */ }
+
+/* Content Margins */
+.ml-16 { margin-left: 4rem; /* 64px */ }
+.ml-64 { margin-left: 16rem; /* 256px */ }
+
+/* Expected Layout Values:
+- Collapsed Sidebar: 64px width, content with 64px left margin
+- Expanded Sidebar: 256px width, content with 256px left margin
+- Mobile: Sidebar overlay, content with 0 margin
+*/
+
+/* CSS Custom Properties for dynamic values */
+:root {
+  --sidebar-width-collapsed: 4rem; /* 64px */
+  --sidebar-width-expanded: 16rem; /* 256px */
+}
+
+/* Alternative approach using CSS custom properties */
+.sidebar-collapsed {
+  width: var(--sidebar-width-collapsed);
+}
+
+.sidebar-expanded {
+  width: var(--sidebar-width-expanded);
+}
+
+.content-with-sidebar-collapsed {
+  margin-left: var(--sidebar-width-collapsed);
+}
+
+.content-with-sidebar-expanded {
+  margin-left: var(--sidebar-width-expanded);
+}
+
+/* Verification: These values should match */
+/* 4rem = 64px = w-16 = ml-16 */
+/* 16rem = 256px = w-64 = ml-64 */

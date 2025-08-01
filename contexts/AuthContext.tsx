@@ -1,32 +1,29 @@
-// ====================================================================
-// FILE 1 (UPDATED): contexts/AuthContext.tsx
-// Lokasi: contexts/AuthContext.tsx
-// ====================================================================
-
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { AuthAPI, ApiError } from '@/lib/services/apiService';
 
-// --- Interface User yang lebih lengkap ---
+// Definisikan interface User agar konsisten
 export interface User {
   id: number;
   username: string;
   email: string;
-  role: 'ADMIN' | 'TEACHER' | 'USER';
+  role: 'ADMIN' | 'TEACHER' | 'USER' | string;
   name?: string;
-  avatarUrl?: string; // Pastikan ini ada
-  bio?: string;       // Pastikan ini ada
-  department?: string;// Pastikan ini ada
-  // Tambahkan properti lain yang mungkin dikembalikan oleh backend
+  avatarUrl?: string;
+  bio?: string;
+  department?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (accessToken: string) => Promise<void>; // Fungsi ini akan set token & fetch user profile
+  login: (token: string) => Promise<void>;
+  loginWithCredentials: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  isLoading: boolean;
-  updateUserContext: (newUserData: Partial<User>) => void; // Fungsi untuk update state user secara optimistik
+  isLoading: boolean; // Status loading untuk inisialisasi awal
+  updateUserContext: (newUserData: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,83 +31,110 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Mulai dengan loading true saat aplikasi pertama kali dimuat
-  const [mounted, setMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
+  // Fungsi terpusat untuk mengambil profil pengguna dari backend
   const fetchUserProfile = async (accessToken: string) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/profile`, {
-        headers: { 'Authorization': `Bearer ${accessToken}` },
-      });
-  
-      if (!response.ok) {
-        throw new Error('Failed to fetch user profile');
+      const data = await AuthAPI.getProfile(accessToken);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('👤 User profile fetched:', data);
       }
-  
-      const userData = await response.json();
-      setUser(userData);
+      
+      const mappedUser: User = {
+        id: data.id,
+        username: data.username,
+        email: data.email,
+        role: data.role,
+        name: data.name || data.username,
+        avatarUrl: data.avatarUrl,
+        bio: data.bio,
+        department: data.department,
+      };
+
+      setUser(mappedUser);
       setToken(accessToken);
-      localStorage.setItem('accessToken', accessToken);
+      if (typeof window !== "undefined") {
+        localStorage.setItem('accessToken', accessToken);
+      }
     } catch (error) {
-      console.error("Error fetching user profile:", error);
+      console.error("Gagal memvalidasi sesi:", error);
       logout();
     } finally {
       setIsLoading(false);
     }
   };
   
-  // Efek ini berjalan sekali saat komponen pertama kali dimuat
+  // Efek ini berjalan sekali saat aplikasi pertama kali dimuat
   useEffect(() => {
-    setMounted(true);
-    if (typeof window !== "undefined") {
-        const storedToken = localStorage.getItem('accessToken');
-        if (storedToken) {
-          fetchUserProfile(storedToken);
-        } else {
-          setIsLoading(false);
-        }
+    const storedToken = typeof window !== "undefined" ? localStorage.getItem('accessToken') : null;
+    if (storedToken) {
+      fetchUserProfile(storedToken);
     } else {
-        setIsLoading(false); 
+      setIsLoading(false); // Tidak ada token, selesai loading
     }
   }, []);
 
-
-  const login = async (accessToken: string) => {
-    // Fungsi login sekarang hanya memicu fetchUserProfile
+  // Method untuk login dengan token langsung (digunakan setelah berhasil login)
+  const login = async (accessToken: string): Promise<void> => {
     await fetchUserProfile(accessToken);
+  };
+
+  // Method untuk login dengan credentials
+  const loginWithCredentials = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    setIsLoading(true);
+    try {
+      const data = await AuthAPI.login(username, password);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔑 Login successful:', { username, token: data.access_token?.substring(0, 20) + '...' });
+      }
+      
+      if (data.access_token) {
+        await fetchUserProfile(data.access_token);
+        return { success: true };
+      }
+      
+      return { 
+        success: false, 
+        error: "Token tidak ditemukan dalam response" 
+      };
+
+    } catch (error) {
+      console.error("Login error:", error);
+      const apiError = error as ApiError;
+      return { 
+        success: false, 
+        error: apiError.message || "Terjadi kesalahan saat menghubungi server" 
+      };
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const logout = () => {
     setUser(null);
     setToken(null);
     if (typeof window !== "undefined") {
-        localStorage.removeItem('accessToken');
-        window.location.href = '/auth/login'; // Redirect paksa ke halaman login
+      localStorage.removeItem('accessToken');
     }
+    router.push('/'); // Gunakan router untuk redirect yang lebih baik
   };
 
   // Fungsi untuk update user di context secara optimistik
   const updateUserContext = (newUserData: Partial<User>) => {
     setUser(prevUser => {
       if (prevUser) {
-        console.log("Updating user context optimistically:", { ...prevUser, ...newUserData });
         return { ...prevUser, ...newUserData };
       }
       return null;
     });
   };
 
-  // Prevent hydration mismatch by not rendering auth-dependent content until mounted
-  if (!mounted) {
-    return (
-      <AuthContext.Provider value={{ user: null, token: null, login, logout, isLoading: true, updateUserContext }}>
-        {children}
-      </AuthContext.Provider>
-    );
-  }
-
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading, updateUserContext }}>
+    <AuthContext.Provider value={{ user, token, login, loginWithCredentials, logout, isLoading, updateUserContext }}>
       {children}
     </AuthContext.Provider>
   );

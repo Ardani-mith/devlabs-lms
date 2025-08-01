@@ -3,16 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { MagnifyingGlassIcon, FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { VideoCameraIcon, DocumentTextIcon, QuestionMarkCircleIcon, PresentationChartLineIcon, SparklesIcon, BookOpenIcon } from '@heroicons/react/24/solid';
-
-interface Lesson {
-  id: string;
-  title: string;
-  type: 'video' | 'bacaan' | 'kuis' | 'tugas' | 'interaktif';
-  durationMinutes?: number;
-  status: 'selesai' | 'terkunci' | 'sedang_dipelajari' | 'selanjutnya';
-  url: string;
-  isPreviewable?: boolean;
-}
+import { Lesson } from '@/lib/types';
 
 interface Module {
   id: string;
@@ -53,7 +44,7 @@ export default function LessonSearch({ modules, onLessonSelect, activeLesson }: 
     });
   }, [allLessons, searchQuery, selectedType, selectedStatus]);
 
-  const getLessonIcon = (type: string) => {
+  const getLessonIcon = (type: string | undefined) => {
     switch (type) {
       case 'video': return VideoCameraIcon;
       case 'bacaan': return DocumentTextIcon;
@@ -64,7 +55,7 @@ export default function LessonSearch({ modules, onLessonSelect, activeLesson }: 
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | undefined) => {
     switch (status) {
       case 'selesai': return 'text-green-500';
       case 'sedang_dipelajari': return 'text-blue-500';
