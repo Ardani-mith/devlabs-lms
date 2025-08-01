@@ -93,7 +93,7 @@ export function useLesson(id: number | null): UseLessonReturn {
 // ====================================================================
 
 interface UseLessonManagementReturn {
-  createLesson: (data: CreateLessonRequest) => Promise<Lesson>;
+  createLesson: (courseId: number, data: CreateLessonRequest) => Promise<Lesson>;
   updateLesson: (id: number, data: UpdateLessonRequest) => Promise<Lesson>;
   deleteLesson: (id: number) => Promise<void>;
   reorderLessons: (courseId: number, lessonIds: number[]) => Promise<void>;
@@ -105,12 +105,12 @@ export function useLessonManagement(): UseLessonManagementReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createLesson = useCallback(async (data: CreateLessonRequest): Promise<Lesson> => {
+  const createLesson = useCallback(async (courseId: number, data: CreateLessonRequest): Promise<Lesson> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const lesson = await lessonEndpoints.create(data);
+      const lesson = await lessonEndpoints.create(courseId, data);
       return lesson;
     } catch (err: any) {
       setError(err.message || 'Failed to create lesson');

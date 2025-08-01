@@ -35,7 +35,7 @@ interface LessonFormData {
   description: string;
   videoUrl: string;
   duration: number;
-  id?: number; // Optional ID for temporary lessons
+  id?: number | string; // Allow both number (real ID) and string (temporary ID)
 }
 
 interface LessonManagerProps {
@@ -255,7 +255,7 @@ export default function LessonManager({ course, onClose }: LessonManagerProps) {
     const newLesson = {
       ...currentLesson,
       videoUrl: embedUrl,
-      id: Date.now() // Temporary ID for display
+      id: `temp_${Date.now()}` // Use string prefix for temporary IDs
     };
     console.log('📋 New lesson object:', newLesson);
 
@@ -283,11 +283,11 @@ export default function LessonManager({ course, onClose }: LessonManagerProps) {
     const lessonToRemove = lessons[index];
     console.log('🗑️ Lesson to remove:', lessonToRemove);
     
-    // If this is an existing lesson (has a real ID), delete it from backend
-    if (lessonToRemove.id && lessonToRemove.id < 1000000000) {
+    // If this is an existing lesson (has a real numeric ID), delete it from backend
+    if (lessonToRemove.id && typeof lessonToRemove.id === 'number') {
       console.log('🗑️ Deleting existing lesson from backend:', lessonToRemove.id);
       try {
-        await lessonEndpoints.delete(lessonToRemove.id);
+        await lessonEndpoints.delete(lessonToRemove.id as number);
         console.log('✅ Lesson deleted from backend successfully');
       } catch (error) {
         console.error('❌ Failed to delete lesson from backend:', error);
@@ -335,8 +335,8 @@ export default function LessonManager({ course, onClose }: LessonManagerProps) {
         const lesson = lessons[i];
         console.log(`💾 Saving lesson ${i + 1}/${lessons.length}:`, lesson.title);
         
-        // Check if this is a new lesson (no ID or temporary ID) or existing lesson
-        const isNewLesson = !lesson.id || lesson.id > 1000000000; // Temporary IDs are timestamps
+        // Check if this is a new lesson (no ID, string ID, or very large number ID)
+        const isNewLesson = !lesson.id || typeof lesson.id === 'string' || (typeof lesson.id === 'number' && lesson.id > 1000000000);
         
         if (isNewLesson) {
           // Create new lesson
@@ -363,7 +363,7 @@ export default function LessonManager({ course, onClose }: LessonManagerProps) {
           };
           
           console.log(`💾 Updating existing lesson ${lesson.id}:`, updateRequest);
-          const savedLesson = await lessonEndpoints.update(lesson.id!, updateRequest);
+          const savedLesson = await lessonEndpoints.update(lesson.id as number, updateRequest);
           console.log(`✅ Updated lesson:`, savedLesson);
           savedLessons.push(savedLesson);
         }

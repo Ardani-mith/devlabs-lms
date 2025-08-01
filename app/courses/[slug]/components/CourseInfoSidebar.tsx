@@ -17,16 +17,29 @@ import {
 import { CourseDetail } from "@/lib/types";
 import { formatDate, formatPrice } from "@/lib/utils/courseHelpers";
 import { cardStyles, buttonStyles, textStyles } from "@/lib/utils/styles";
+import { type TestEnrollmentData } from "@/lib/utils/testEnrollment";
 
 interface CourseInfoSidebarProps {
   courseData: CourseDetail;
   isCourseCompleted: boolean;
+  testEnrollmentData?: TestEnrollmentData;
 }
 
 export default function CourseInfoSidebar({
   courseData,
   isCourseCompleted,
+  testEnrollmentData,
 }: CourseInfoSidebarProps) {
+  // Use test data in development, real data in production
+  const effectiveEnrollmentData = process.env.NODE_ENV === 'development' && testEnrollmentData
+    ? {
+        isEnrolled: testEnrollmentData.isEnrolled,
+        userProgress: testEnrollmentData.userProgress,
+      }
+    : {
+        isEnrolled: courseData.isEnrolled || false,
+        userProgress: courseData.userProgress || 0,
+      };
   return (
     <div className={cardStyles.sidebar}>
       {/* Course Info Card */}
@@ -81,19 +94,19 @@ export default function CourseInfoSidebar({
       </div>
 
       {/* Progress Card (for enrolled users) */}
-      {courseData.isEnrolled && (
+      {effectiveEnrollmentData.isEnrolled && (
         <div className={`${cardStyles.main} p-6`}>
           <h3 className={textStyles.heading.h3}>Progres Belajar Anda</h3>
           
           <div className="w-full bg-gray-200 dark:bg-neutral-700 rounded-full h-3 mb-2 overflow-hidden">
             <div
               className="bg-gradient-to-r from-purple-500 to-brand-purple h-3 rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${courseData.userProgress || courseData.progress || 0}%` }}
+              style={{ width: `${effectiveEnrollmentData.userProgress}%` }}
             ></div>
           </div>
           
           <p className="text-sm font-semibold text-gray-700 dark:text-neutral-200 mb-4 text-right">
-            {courseData.userProgress || courseData.progress || 0}% Selesai
+            {effectiveEnrollmentData.userProgress}% Selesai
           </p>
 
           {/* Continue Learning Button */}
@@ -131,34 +144,46 @@ export default function CourseInfoSidebar({
       )}
 
       {/* Purchase Card (for non-enrolled users) */}
-      {!courseData.isEnrolled && courseData.price !== undefined && (
+      {!effectiveEnrollmentData.isEnrolled && courseData.price !== undefined && (
         <div className={`${cardStyles.main} p-6 space-y-3`}>
           <div className="text-center">
-            {typeof courseData.price === "number" ? (
+            {courseData.price === 0 ? (
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                GRATIS
+              </p>
+            ) : (
               <>
                 <p className="text-3xl font-bold text-brand-purple dark:text-purple-400">
                   {formatPrice(courseData.price)}
                 </p>
-                {courseData.originalPrice && courseData.originalPrice > courseData.price && (
+                {courseData.originalPrice && 
+                 typeof courseData.price === 'number' && 
+                 courseData.originalPrice > courseData.price && (
                   <span className="text-sm line-through text-gray-500 dark:text-neutral-400 ml-1.5">
                     {formatPrice(courseData.originalPrice)}
                   </span>
                 )}
               </>
-            ) : (
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                GRATIS
-              </p>
             )}
           </div>
 
           <button className={`w-full flex items-center justify-center ${buttonStyles.success}`}>
-            <CurrencyDollarIcon className="h-6 w-6 mr-2.5" />
-            Daftar Kursus Sekarang
+            {courseData.price === 0 ? (
+              <>
+                <AcademicCapIcon className="h-6 w-6 mr-2.5" />
+                Daftar Gratis
+              </>
+            ) : (
+              <>
+                <CurrencyDollarIcon className="h-6 w-6 mr-2.5" />
+                Daftar Kursus Sekarang
+              </>
+            )}
           </button>
 
           <button className={`w-full flex items-center justify-center ${buttonStyles.secondary}`}>
-            <HeartIcon className="h-5 w-5 mr-2" /> Tambah ke Wishlist
+            <HeartIcon className="h-5 w-5 mr-2" /> 
+            {courseData.price === 0 ? 'Simpan ke Wishlist' : 'Tambah ke Wishlist'}
           </button>
         </div>
       )}

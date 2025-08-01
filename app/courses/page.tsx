@@ -5,6 +5,7 @@ import { CourseDisplayCard } from '@/app/courses/CourseDisplayCard';
 import { MagnifyingGlassIcon, AdjustmentsHorizontalIcon, ChevronDownIcon, FunnelIcon, XMarkIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 import { BookOpenIcon as NoCourseIcon } from '@heroicons/react/24/solid';
 import { Course } from '@/lib/types';
+import { apiClient } from '@/lib/utils/apiUtils';
 
 const courseCategories = ["Semua Kategori", "Web Development", "Data Science", "UI/UX Design", "Digital Marketing", "Bahasa", "Manajemen", "Bisnis"];
 const courseLevels = ["Semua Level", "Pemula", "Menengah", "Lanjutan"];
@@ -18,65 +19,71 @@ export default function CoursesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch courses from backend API
-  useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/courses`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+  // Fetch courses from backend API with retry logic
+  const fetchCourses = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('🔄 Fetching courses from API...');
+      const data = await apiClient.get('/courses');
+      console.log('✅ Fetched courses from API:', data);
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch courses: ${response.status}`);
+      // Transform backend data to frontend Course interface
+      const transformedCourses: Course[] = data.map((course: any) => ({
+        id: course.id?.toString() || '',
+        slug: course.slug || course.id?.toString() || '',
+        title: course.title || 'Untitled Course',
+        description: course.description || '',
+        thumbnailUrl: course.thumbnailUrl || course.youtubeThumbnailUrl || '/images/course-placeholder.svg',
+        instructorName: course.instructor?.name || course.instructorName || 'Unknown Instructor',
+        instructorAvatarUrl: course.instructor?.avatarUrl || course.instructorAvatarUrl,
+        instructorId: course.instructorId?.toString() || course.instructor?.id?.toString(),
+        category: course.category || 'Uncategorized',
+        lessonsCount: course.lessonsCount || course._count?.lessons || 0,
+        totalDurationHours: course.totalDurationHours || 0,
+        level: course.level || 'Pemula',
+        rating: course.rating || 0,
+        studentsEnrolled: course.studentsEnrolled || course._count?.enrollments || 0,
+        price: course.price || 0,
+        courseUrl: `/courses/${course.slug || course.id}`,
+        isNew: course.isNew || false,
+        published: course.published || true, // Only published courses from this endpoint
+        tags: course.tags || [],
+        youtubeEmbedUrl: course.youtubeEmbedUrl || '',
+        youtubeVideoId: course.youtubeVideoId || '',
+        youtubeThumbnailUrl: course.youtubeThumbnailUrl || '',
+        createdAt: course.createdAt,
+        updatedAt: course.updatedAt,
+      }));
+
+      setCourses(transformedCourses);
+      console.log('✅ Transformed courses:', transformedCourses);
+    } catch (err) {
+      console.error('❌ Error fetching courses:', err);
+      
+      // Handle different error types
+      let errorMessage = 'Failed to load courses';
+      
+      if (err instanceof Error) {
+        if (err.message.includes('429')) {
+          errorMessage = 'Server is busy. Please wait a moment and try again.';
+        } else if (err.message.includes('500') || err.message.includes('502') || err.message.includes('503')) {
+          errorMessage = 'Server is temporarily unavailable. Please try again later.';
+        } else if (err.message.includes('Network')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else {
+          errorMessage = err.message;
         }
-
-        const data = await response.json();
-        console.log('Fetched courses from API:', data);
-
-        // Transform backend data to frontend Course interface
-        const transformedCourses: Course[] = data.map((course: any) => ({
-          id: course.id?.toString() || '',
-          slug: course.slug || course.id?.toString() || '',
-          title: course.title || 'Untitled Course',
-          description: course.description || '',
-          thumbnailUrl: course.thumbnailUrl || course.youtubeThumbnailUrl || '/images/course-placeholder.svg',
-          instructorName: course.instructor?.name || course.instructorName || 'Unknown Instructor',
-          instructorAvatarUrl: course.instructor?.avatarUrl || course.instructorAvatarUrl,
-          instructorId: course.instructorId?.toString() || course.instructor?.id?.toString(),
-          category: course.category || 'Uncategorized',
-          lessonsCount: course.lessonsCount || course._count?.lessons || 0,
-          totalDurationHours: course.totalDurationHours || 0,
-          level: course.level || 'Pemula',
-          rating: course.rating || 0,
-          studentsEnrolled: course.studentsEnrolled || course._count?.enrollments || 0,
-          price: course.price || 0,
-          courseUrl: `/courses/${course.slug || course.id}`,
-          isNew: course.isNew || false,
-          published: course.published || true, // Only published courses from this endpoint
-          tags: course.tags || [],
-          youtubeEmbedUrl: course.youtubeEmbedUrl || '',
-          youtubeVideoId: course.youtubeVideoId || '',
-          youtubeThumbnailUrl: course.youtubeThumbnailUrl || '',
-          createdAt: course.createdAt,
-          updatedAt: course.updatedAt,
-        }));
-
-        setCourses(transformedCourses);
-        console.log('Transformed courses:', transformedCourses);
-      } catch (err) {
-        console.error('Error fetching courses:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch courses');
-      } finally {
-        setLoading(false);
       }
-    };
+      
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchCourses();
   }, []);
 
@@ -188,7 +195,12 @@ export default function CoursesPage() {
       {loading ? (
         <div className="text-center py-16">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-purple mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-neutral-400">Memuat kursus dari server...</p>
+          <p className="mt-4 text-gray-600 dark:text-neutral-400">
+            Memuat kursus dari server...
+          </p>
+          <p className="mt-2 text-sm text-gray-500 dark:text-neutral-500">
+            Mohon tunggu sebentar jika server sedang sibuk
+          </p>
         </div>
       ) : error ? (
         <div className="text-center py-16">
@@ -198,10 +210,11 @@ export default function CoursesPage() {
             {error}
           </p>
           <button
-            onClick={() => window.location.reload()}
-            className="mt-6 px-5 py-2.5 border border-transparent text-sm font-medium rounded-md text-white bg-brand-purple hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:focus:ring-offset-neutral-900"
+            onClick={fetchCourses}
+            disabled={loading}
+            className="mt-6 px-5 py-2.5 border border-transparent text-sm font-medium rounded-md text-white bg-brand-purple hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:focus:ring-offset-neutral-900 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Coba Lagi
+            {loading ? 'Mencoba Lagi...' : 'Coba Lagi'}
           </button>
         </div>
       ) : filteredCourses.length > 0 ? (

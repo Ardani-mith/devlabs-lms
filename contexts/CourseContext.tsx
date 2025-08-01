@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { Course } from '@/lib/types';
+import { apiClient } from '@/lib/utils/apiUtils';
 
 export interface CourseFormData {
   title: string;
@@ -116,18 +117,9 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
     setError(null);
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/courses`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch courses: ${response.status}`);
-      }
-
-      const backendCourses = await response.json();
+      console.log('🔄 CourseContext: Fetching courses from API...');
+      const backendCourses = await apiClient.get('/courses');
+      console.log('✅ CourseContext: Fetched courses from API:', backendCourses);
       
       if (!Array.isArray(backendCourses)) {
         throw new Error('Invalid course data received');
@@ -139,8 +131,24 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
       
       setCourses(transformedCourses);
     } catch (error) {
-      console.error('Error fetching courses:', error);
-      setError(error instanceof Error ? error.message : 'Failed to fetch courses');
+      console.error('❌ CourseContext: Error fetching courses:', error);
+      
+      // Enhanced error handling for different error types
+      let errorMessage = 'Failed to load courses';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('429')) {
+          errorMessage = 'Server is busy. Please wait a moment and try again.';
+        } else if (error.message.includes('500') || error.message.includes('502') || error.message.includes('503')) {
+          errorMessage = 'Server is temporarily unavailable. Please try again later.';
+        } else if (error.message.includes('Network')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
       setCourses([]);
     } finally {
       setLoading(false);
@@ -172,37 +180,36 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
     setError(null);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/courses`, {
-        method: 'POST',
+      const createdCourse = await apiClient.post('/courses', courseData, {
         headers: {
-          'Content-Type': 'application/json',
           ...(token && { 'Authorization': `Bearer ${token}` }),
         },
-        body: JSON.stringify(courseData),
       });
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Authentication required. Please log in to create courses.');
-        }
-        if (response.status === 403) {
-          throw new Error('Permission denied. Only teachers and admins can create courses.');
-        }
-        if (response.status === 400) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || 'Invalid course data provided.');
-        }
-        throw new Error(`Failed to create course: ${response.status}`);
-      }
-
-      const newBackendCourse = await response.json();
-      const newCourse = transformBackendCourse(newBackendCourse);
-      
+      const newCourse = transformBackendCourse(createdCourse);
       setCourses(prev => [...prev, newCourse]);
       return newCourse;
     } catch (error) {
-      console.error('Error creating course:', error);
-      setError(error instanceof Error ? error.message : 'Failed to create course');
+      console.error('❌ CourseContext: Error creating course:', error);
+      
+      // Enhanced error handling
+      let errorMessage = 'Failed to create course';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('401')) {
+          errorMessage = 'Authentication required. Please log in to create courses.';
+        } else if (error.message.includes('403')) {
+          errorMessage = 'Permission denied. Only teachers and admins can create courses.';
+        } else if (error.message.includes('400')) {
+          errorMessage = 'Invalid course data provided.';
+        } else if (error.message.includes('429')) {
+          errorMessage = 'Server is busy. Please wait a moment and try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
       return null;
     } finally {
       setLoading(false);
@@ -231,40 +238,38 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
         throw new Error('Invalid course ID format');
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/courses/${numericId}`, {
-        method: 'PATCH', // Backend uses PATCH, not PUT
+      const updatedCourse = await apiClient.put(`/courses/${numericId}`, courseData, {
         headers: {
-          'Content-Type': 'application/json',
           ...(token && { 'Authorization': `Bearer ${token}` }),
         },
-        body: JSON.stringify(courseData),
       });
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Authentication required. Please log in to update courses.');
-        }
-        if (response.status === 403) {
-          throw new Error('Permission denied. Only teachers and admins can update courses.');
-        }
-        if (response.status === 404) {
-          throw new Error('Course not found. It may have been deleted or you may not have permission to edit it.');
-        }
-        if (response.status === 400) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || 'Invalid course data provided.');
-        }
-        throw new Error(`Failed to update course: ${response.status}`);
-      }
-
-      const updatedBackendCourse = await response.json();
-      const updatedCourse = transformBackendCourse(updatedBackendCourse);
-      
-      setCourses(prev => prev.map(course => course.id === id ? updatedCourse : course));
-      return updatedCourse;
+      const transformedCourse = transformBackendCourse(updatedCourse);
+      setCourses(prev => prev.map(course => course.id === id ? transformedCourse : course));
+      return transformedCourse;
     } catch (error) {
-      console.error('Error updating course:', error);
-      setError(error instanceof Error ? error.message : 'Failed to update course');
+      console.error('❌ CourseContext: Error updating course:', error);
+      
+      // Enhanced error handling
+      let errorMessage = 'Failed to update course';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('401')) {
+          errorMessage = 'Authentication required. Please log in to update courses.';
+        } else if (error.message.includes('403')) {
+          errorMessage = 'Permission denied. Only teachers and admins can update courses.';
+        } else if (error.message.includes('404')) {
+          errorMessage = 'Course not found. It may have been deleted or you may not have permission to edit it.';
+        } else if (error.message.includes('400')) {
+          errorMessage = 'Invalid course data provided.';
+        } else if (error.message.includes('429')) {
+          errorMessage = 'Server is busy. Please wait a moment and try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
       return null;
     } finally {
       setLoading(false);
@@ -293,32 +298,35 @@ export const CourseProvider: React.FC<CourseProviderProps> = ({ children }) => {
         throw new Error('Invalid course ID format');
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/courses/${numericId}`, {
-        method: 'DELETE',
+      await apiClient.delete(`/courses/${numericId}`, {
         headers: {
-          'Content-Type': 'application/json',
           ...(token && { 'Authorization': `Bearer ${token}` }),
         },
       });
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Authentication required. Please log in to delete courses.');
-        }
-        if (response.status === 403) {
-          throw new Error('Permission denied. Only teachers and admins can delete courses.');
-        }
-        if (response.status === 404) {
-          throw new Error('Course not found. It may have been already deleted.');
-        }
-        throw new Error(`Failed to delete course: ${response.status}`);
-      }
-
       setCourses(prev => prev.filter(course => course.id !== id));
       return true;
     } catch (error) {
-      console.error('Error deleting course:', error);
-      setError(error instanceof Error ? error.message : 'Failed to delete course');
+      console.error('❌ CourseContext: Error deleting course:', error);
+      
+      // Enhanced error handling
+      let errorMessage = 'Failed to delete course';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('401')) {
+          errorMessage = 'Authentication required. Please log in to delete courses.';
+        } else if (error.message.includes('403')) {
+          errorMessage = 'Permission denied. Only teachers and admins can delete courses.';
+        } else if (error.message.includes('404')) {
+          errorMessage = 'Course not found. It may have been already deleted.';
+        } else if (error.message.includes('429')) {
+          errorMessage = 'Server is busy. Please wait a moment and try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
       return false;
     } finally {
       setLoading(false);

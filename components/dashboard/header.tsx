@@ -1,15 +1,17 @@
 "use client";
 
 import { Fragment } from 'react';
-import { MagnifyingGlassIcon, BellIcon, UserCircleIcon, HeartIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, BellIcon, UserCircleIcon, HeartIcon, Bars3Icon } from '@heroicons/react/24/outline';
 import { Menu, Transition } from '@headlessui/react';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSidebar } from '@/contexts/SidebarContext';
 import Image from 'next/image';
 import Link from 'next/link';
 
 export function Header() {
   const { user, logout } = useAuth();
+  const { toggle, isCollapsed } = useSidebar();
   
   const handleLogout = () => {
     logout();
@@ -17,8 +19,17 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 flex h-20 flex-shrink-0 items-center justify-between border-b border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
-      {/* Left Section - Search (with mobile hamburger menu spacing) */}
-      <div className="flex flex-1 items-center pl-12 lg:pl-0">
+      {/* Left Section - Sidebar Toggle & Search */}
+      <div className="flex flex-1 items-center">
+        {/* Desktop Sidebar Toggle */}
+        <button
+          onClick={toggle}
+          className="hidden lg:flex p-2 rounded-lg text-gray-400 dark:text-neutral-400 hover:text-gray-600 dark:hover:text-neutral-300 hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors duration-200 mr-4"
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <Bars3Icon className="h-6 w-6" />
+        </button>
+        
         <form className="relative hidden w-full md:block md:max-w-md lg:max-w-lg" action="#" method="GET">
           <label htmlFor="search-field" className="sr-only">
             Search

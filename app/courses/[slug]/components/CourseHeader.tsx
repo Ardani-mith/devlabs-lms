@@ -13,12 +13,25 @@ import {
 } from "@heroicons/react/24/solid";
 import { CourseDetail } from "@/lib/types";
 import { extractYouTubeVideoId, getYouTubeThumbnail, isYouTubeUrl } from "@/lib/utils/youtube";
+import { type TestEnrollmentData } from "@/lib/utils/testEnrollment";
 
 interface CourseHeaderProps {
   course: CourseDetail;
+  testEnrollmentData?: TestEnrollmentData;
 }
 
-export default function CourseHeader({ course }: CourseHeaderProps) {
+export default function CourseHeader({ course, testEnrollmentData }: CourseHeaderProps) {
+  // Use test data in development, real data in production
+  const effectiveEnrollmentData = process.env.NODE_ENV === 'development' && testEnrollmentData
+    ? {
+        isEnrolled: testEnrollmentData.isEnrolled,
+        userProgress: testEnrollmentData.userProgress,
+      }
+    : {
+        isEnrolled: course.isEnrolled || false,
+        userProgress: course.userProgress || 0,
+      };
+
   // Function to get proper image URL, converting YouTube URLs to thumbnails
   const getProperImageUrl = (url: string | undefined): string => {
     if (!url) return '/images/default-course-banner.jpg';
@@ -105,35 +118,35 @@ export default function CourseHeader({ course }: CourseHeaderProps) {
           </div>
         </div>
         
-        {course.isEnrolled && (
+        {effectiveEnrollmentData.isEnrolled && (
           <div className="mb-7 max-w-md">
             <div className="flex justify-between items-center text-xs text-neutral-200 mb-1">
               <span>Progres Belajar Anda</span>
-              <span className="font-semibold">{course.userProgress}%</span>
+              <span className="font-semibold">{effectiveEnrollmentData.userProgress}%</span>
             </div>
             <div className="w-full bg-white/20 dark:bg-black/30 rounded-full h-3 overflow-hidden">
               <div
                 className="bg-gradient-to-r from-purple-500 to-brand-purple h-3 rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${(course.userProgress || course.progress || 0)}%` }}
+                style={{ width: `${effectiveEnrollmentData.userProgress}%` }}
               ></div>
             </div>
           </div>
         )}
         
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-          {course.isEnrolled ? (
+          {effectiveEnrollmentData.isEnrolled ? (
             <Link
               href={course.lastAccessedLessonUrl || "#"}
               className="w-full sm:w-auto flex items-center justify-center px-8 py-3.5 border-2 border-transparent text-base font-semibold rounded-lg text-white bg-brand-purple hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-500 transition-all duration-300 shadow-lg transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-500/50"
             >
               <PlayCircleIcon className="h-6 w-6 mr-2.5" />
-              {(course.userProgress || course.progress || 0) > 0 ? "Lanjutkan Belajar" : "Mulai Belajar Sekarang"}
+              {effectiveEnrollmentData.userProgress > 0 ? "Lanjutkan Belajar" : "Mulai Belajar Sekarang"}
             </Link>
           ) : (
             <button className="w-full sm:w-auto flex items-center justify-center px-8 py-3.5 border-2 border-transparent text-base font-semibold rounded-lg text-white bg-green-600 hover:bg-green-700 transition-all duration-300 shadow-lg transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-green-500/50">
               <CurrencyDollarIcon className="h-6 w-6 mr-2.5" />
-              Daftar Kursus (Rp{course.price?.toLocaleString?.("id-ID") || "N/A"})
-              {course.originalPrice && (
+              {course.price === 0 ? "Daftar Gratis" : `Daftar Kursus (Rp${course.price?.toLocaleString?.("id-ID") || "N/A"})`}
+              {course.originalPrice && course.price !== 0 && (
                 <span className="ml-2 line-through text-sm opacity-80">
                   Rp{course.originalPrice.toLocaleString("id-ID")}
                 </span>
@@ -141,9 +154,12 @@ export default function CourseHeader({ course }: CourseHeaderProps) {
             </button>
           )}
           
-          <button className="w-full sm:w-auto flex items-center justify-center px-6 py-3.5 border-2 border-neutral-500/70 text-base font-medium rounded-lg text-white hover:bg-white/10 dark:hover:bg-black/20 transition-colors focus:outline-none focus:ring-4 focus:ring-neutral-500/50">
-            <HeartIcon className="h-5 w-5 mr-2" /> Simpan ke Wishlist
-          </button>
+          {/* Wishlist button - only show for non-enrolled users */}
+          {!effectiveEnrollmentData.isEnrolled && (
+            <button className="w-full sm:w-auto flex items-center justify-center px-6 py-3.5 border-2 border-neutral-500/70 text-base font-medium rounded-lg text-white hover:bg-white/10 dark:hover:bg-black/20 transition-colors focus:outline-none focus:ring-4 focus:ring-neutral-500/50">
+              <HeartIcon className="h-5 w-5 mr-2" /> Simpan ke Wishlist
+            </button>
+          )}
         </div>
         
         <p className="text-xs text-neutral-300 dark:text-neutral-400 mt-5">

@@ -14,7 +14,7 @@ export const getPreviousLesson = (lessons: Lesson[], currentIndex: number): Less
 
 export const getLessonNavigation = (modules: Module[], currentLesson: Lesson) => {
   const allLessons = getAllLessons(modules);
-  const currentIndex = getCurrentLessonIndex(allLessons, currentLesson.id);
+  const currentIndex = getCurrentLessonIndex(allLessons, String(currentLesson.id));
   
   return {
     allLessons,
@@ -58,7 +58,7 @@ export const getLessonTypeIcon = (type: Lesson['type']): string => {
     tugas: "📝",
     interaktif: "🎮"
   };
-  return iconMap[type] || "📄";
+  return iconMap[type || 'bacaan'] || "📄";
 };
 
 export const getLessonStatusColor = (status: Lesson['status']): string => {
@@ -68,7 +68,7 @@ export const getLessonStatusColor = (status: Lesson['status']): string => {
     sedang_dipelajari: "text-blue-600 bg-blue-100", 
     selanjutnya: "text-orange-600 bg-orange-100"
   };
-  return colorMap[status] || "text-gray-600 bg-gray-100";
+  return colorMap[status || 'selanjutnya'] || "text-gray-600 bg-gray-100";
 };
 
 export const formatDate = (dateString: string | undefined): string => {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Header } from "@/components/dashboard/header";
+import { useSidebar } from "@/contexts/SidebarContext";
 
 interface ProtectedLayoutProps {
   children: React.ReactNode;
@@ -12,6 +13,7 @@ interface ProtectedLayoutProps {
 
 export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
   const { user, isLoading } = useAuth();
+  const { isCollapsed } = useSidebar();
   const router = useRouter();
 
   useEffect(() => {
@@ -35,9 +37,9 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-neutral-900">
       <Sidebar />
-      <div className="lg:pl-64 flex flex-col flex-1">
+      <div className={`flex flex-col min-h-screen transition-all duration-300 ${isCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
         <Header />
-        <main className="flex-1">
+        <main className="flex-1 w-full">
           {children}
         </main>
       </div>

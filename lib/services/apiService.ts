@@ -1,4 +1,5 @@
 // API Error handling utilities
+import { fetchWithRetry } from '@/lib/utils/apiUtils';
 
 export interface ApiError {
   message: string;
@@ -29,7 +30,7 @@ export class ApiService {
 
     // Debug logging untuk development
     if (process.env.NODE_ENV === 'development') {
-      console.log('🚀 API Request:', {
+      console.log('🚀 API Request (ApiService):', {
         url,
         method: config.method || 'GET',
         headers: config.headers,
@@ -38,12 +39,13 @@ export class ApiService {
     }
 
     try {
-      const response = await fetch(url, config);
+      // Use fetchWithRetry for rate limiting and error handling
+      const response = await fetchWithRetry(url, config);
       const data = await response.json();
 
       // Debug logging untuk development
       if (process.env.NODE_ENV === 'development') {
-        console.log('📡 API Response:', {
+        console.log('📡 API Response (ApiService):', {
           status: response.status,
           statusText: response.statusText,
           data
@@ -62,15 +64,26 @@ export class ApiService {
     } catch (error) {
       // Debug logging untuk development
       if (process.env.NODE_ENV === 'development') {
-        console.error('❌ API Error:', error);
+        console.error('❌ API Error (ApiService):', error);
       }
 
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw {
-          message: 'Unable to connect to server. Please check your internet connection.',
-          status: 0,
-          details: error
-        } as ApiError;
+      // Handle rate limiting specifically
+      if (error instanceof Error) {
+        if (error.message.includes('429')) {
+          throw {
+            message: 'Server is busy. Please wait a moment and try again.',
+            status: 429,
+            details: error
+          } as ApiError;
+        }
+        
+        if (error.message.includes('fetch') || error.name === 'TypeError') {
+          throw {
+            message: 'Unable to connect to server. Please check your internet connection.',
+            status: 0,
+            details: error
+          } as ApiError;
+        }
       }
       
       throw error;

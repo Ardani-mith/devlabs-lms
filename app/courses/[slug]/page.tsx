@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, use } from "react";
+import React, { useState, useEffect, useMemo, useCallback, use } from "react";
 import SafeImage from "@/components/ui/SafeImage";
 import Link from "next/link";
 import {
@@ -19,6 +19,9 @@ import {
   ShieldCheckIcon,
   HandThumbUpIcon,
   ChevronLeftIcon,
+  EyeIcon,
+  LockClosedIcon,
+  PlayCircleIcon,
 } from "@heroicons/react/24/solid";
 import { ChatBubbleOvalLeftEllipsisIcon } from "@heroicons/react/24/outline";
 
@@ -28,6 +31,9 @@ import CourseInfoSidebar from "./components/CourseInfoSidebar";
 import { CourseTabs, ModuleAccordion } from "./CourseComponents";
 import { CourseDetail, DiscussionComment, Lesson } from "@/lib/types";
 import { getLessonNavigation } from "@/lib/utils/courseHelpers";
+import { getTestEnrollmentData, generateLessonStatuses, type TestEnrollmentData } from "@/lib/utils/testEnrollment";
+import TestControlPanel from "@/components/dev/TestControlPanel";
+import DebugConsole from "@/components/dev/DebugConsole";
 
 // Inline styles to replace the removed styles file
 const layoutStyles = {
@@ -97,13 +103,43 @@ export default function CourseDetailPage({
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("Overview");
   const [newComment, setNewComment] = useState("");
+  const [testEnrollmentData, setTestEnrollmentData] = useState<TestEnrollmentData>();
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
 
+  // Initialize test enrollment data on component mount
+  useEffect(() => {
+    const initialTestData = getTestEnrollmentData(slug);
+    setTestEnrollmentData(initialTestData);
+    console.log('Initial test enrollment data:', initialTestData);
+  }, [slug]);
+
+  // Computed properties that consider test enrollment data
+  const effectiveEnrollmentData = useMemo(() => {
+    if (process.env.NODE_ENV === 'development' && testEnrollmentData) {
+      return {
+        isEnrolled: testEnrollmentData.isEnrolled,
+        userProgress: testEnrollmentData.userProgress,
+        completedLessons: testEnrollmentData.completedLessons || [],
+      };
+    }
+    return {
+      isEnrolled: courseData?.isEnrolled || false,
+      userProgress: courseData?.userProgress || 0,
+      completedLessons: [],
+    };
+  }, [testEnrollmentData?.isEnrolled, testEnrollmentData?.userProgress, testEnrollmentData?.completedLessons, courseData?.isEnrolled, courseData?.userProgress]);
+
   const isCourseCompleted = useMemo(
-    () => courseData?.userProgress === 100,
-    [courseData?.userProgress]
+    () => effectiveEnrollmentData.userProgress === 100,
+    [effectiveEnrollmentData.userProgress]
   );
+
+  // Memoize the enrollment change handler to prevent re-renders
+  const handleEnrollmentChange = useCallback((data: TestEnrollmentData) => {
+    setTestEnrollmentData(data);
+    console.log('Test enrollment data changed:', data);
+  }, []);
 
   useEffect(() => {
     const fetchCourseData = async () => {
@@ -146,7 +182,7 @@ export default function CourseDetailPage({
             studentCount: (courseData as unknown as { studentsEnrolled?: number }).studentsEnrolled || 0,
             studentsEnrolled: (courseData as unknown as { studentsEnrolled?: number }).studentsEnrolled || 0,
             userProgress: 0, // This would come from user progress API
-            isEnrolled: false, // This would come from user enrollment API
+            isEnrolled: (courseData as unknown as { isEnrolled?: boolean }).isEnrolled || false, // Check if user is enrolled
             lastAccessedLessonUrl: undefined,
             lastAccessedLessonTitle: undefined,
             price: (courseData as unknown as { price?: number }).price || 0,
@@ -167,18 +203,27 @@ export default function CourseDetailPage({
             level: ((courseData as unknown as { level?: string }).level || 'Pemula') as "Pemula" | "Menengah" | "Lanjutan" | "Semua Level",
             updatedAt: (courseData as unknown as { updatedAt?: string }).updatedAt || new Date().toISOString(),
             lastUpdated: (courseData as unknown as { updatedAt?: string }).updatedAt || new Date().toISOString(),
-            modules: courseData.modules?.map((module: BackendModule) => ({
+            modules: courseData.modules?.map((module: BackendModule, moduleIndex: number) => ({
               ...module,
               id: module.id.toString(),
-              lessons: module.lessons?.map((lesson: BackendLesson) => ({
-                id: lesson.id.toString(),
-                title: lesson.title,
-                type: "video" as const,
-                durationMinutes: lesson.duration ? Math.round(lesson.duration / 60) : undefined,
-                status: "selanjutnya" as const, // Default status
-                url: lesson.youtubeUrl || "#",
-                isPreviewable: false
-              })) || []
+              lessons: module.lessons?.map((lesson: BackendLesson, lessonIndex: number) => {
+                // Ensure lesson has valid ID
+                const lessonId = lesson.id ? lesson.id.toString() : `temp_${moduleIndex}_${lessonIndex}`;
+                
+                console.log(`Processing lesson: ${lesson.title}, ID: ${lessonId}`);
+                
+                return {
+                  id: lessonId,
+                  title: lesson.title,
+                  type: "video" as const,
+                  durationMinutes: lesson.duration ? Math.round(lesson.duration / 60) : undefined,
+                  status: "selanjutnya" as const, // Default status
+                  url: lesson.youtubeUrl || "#",
+                  videoUrl: lesson.youtubeUrl || "",
+                  // First lesson of first module is always previewable, plus random preview lessons
+                  isPreviewable: (moduleIndex === 0 && lessonIndex === 0) || Math.random() > 0.7
+                };
+              }).filter(lesson => lesson.id !== null && lesson.id !== 'undefined') || [] // Filter out invalid lessons
             })) || [],
             discussions: [],
             faq: [],
@@ -333,11 +378,11 @@ export default function CourseDetailPage({
 
   return (
     <div className="bg-gray-50 dark:bg-neutral-900 text-text-light-primary dark:text-text-dark-primary">
-      <CourseHeader course={courseData} />        <CourseTabs
+      <CourseHeader course={courseData} testEnrollmentData={testEnrollmentData} />        <CourseTabs
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           hasCertificate={courseData.hasCertificate ?? false}
-          isEnrolled={courseData.isEnrolled ?? false}
+          isEnrolled={effectiveEnrollmentData.isEnrolled}
           isCourseCompleted={isCourseCompleted}
         />
 
@@ -478,6 +523,62 @@ export default function CourseDetailPage({
 
             {activeTab === "Materi Pembelajaran" && (
               <div className="space-y-6">
+                {/* Info banner for non-enrolled users */}
+                {!effectiveEnrollmentData.isEnrolled && (
+                  <div className="bg-gradient-to-r from-brand-purple/10 to-purple-600/10 dark:from-purple-900/20 dark:to-purple-800/20 border border-brand-purple/20 dark:border-purple-600/30 rounded-2xl p-6">
+                    <div className="flex items-start space-x-4">
+                      <div className="flex-shrink-0">
+                        <BookOpenIcon className="h-8 w-8 text-brand-purple dark:text-purple-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-neutral-100 mb-2">
+                          Preview Kurikulum Kursus
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-neutral-300 mb-4">
+                          Beberapa materi tersedia untuk preview. Daftar untuk mengakses semua konten lengkap, 
+                          termasuk video pembelajaran, latihan, dan sertifikat kelulusan.
+                        </p>
+                        <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-neutral-400">
+                          <div className="flex items-center space-x-1">
+                            <EyeIcon className="h-4 w-4 text-green-500" />
+                            <span>Preview tersedia</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <LockClosedIcon className="h-4 w-4 text-gray-400" />
+                            <span>Perlu daftar</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Progress banner for enrolled users */}
+                {effectiveEnrollmentData.isEnrolled && effectiveEnrollmentData.userProgress > 0 && (
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-6">
+                    <div className="flex items-start space-x-4">
+                      <div className="flex-shrink-0">
+                        <PlayCircleIcon className="h-8 w-8 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-neutral-100 mb-2">
+                          Progress Pembelajaran Anda
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-neutral-300 mb-3">
+                          Anda telah menyelesaikan {effectiveEnrollmentData.completedLessons.length} dari {courseData.totalLessons} pelajaran 
+                          ({effectiveEnrollmentData.userProgress}% selesai)
+                        </p>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div 
+                            className="bg-green-600 dark:bg-green-500 h-2 rounded-full transition-all duration-300" 
+                            style={{ width: `${effectiveEnrollmentData.userProgress}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 <div className={`${cardStyles.main} ${cardStyles.content} flex flex-col sm:flex-row justify-between items-start sm:items-center`}>
                   <h2 className={`${textStyles.heading.h2} mb-2 sm:mb-0`}>Kurikulum Kursus</h2>
                   <div className="text-right flex-shrink-0">
@@ -495,6 +596,7 @@ export default function CourseDetailPage({
                     module={mod}
                     courseSlug={slug}
                     initialCollapsed={mod.isCollapsedInitially}
+                    isEnrolled={effectiveEnrollmentData.isEnrolled}
                   />
                 ))}
               </div>
@@ -678,6 +780,7 @@ export default function CourseDetailPage({
             <CourseInfoSidebar
               courseData={courseData}
               isCourseCompleted={isCourseCompleted}
+              testEnrollmentData={testEnrollmentData}
             />
           </aside>
         </div>
@@ -700,7 +803,7 @@ export default function CourseDetailPage({
           <div className="flex gap-3">
             {activeLesson.status !== 'selesai' && (
               <button 
-                onClick={() => markLessonComplete(activeLesson.id)}
+                onClick={() => markLessonComplete(String(activeLesson.id))}
                 disabled={isMarkingComplete}
                 className="px-7 py-3 bg-green-600 rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-2 shadow-lg hover:shadow-green-500/30 disabled:opacity-50"
               >
@@ -735,6 +838,15 @@ export default function CourseDetailPage({
           </div>
         </div>
       )}
+
+      {/* Development Test Panel */}
+      <TestControlPanel 
+        courseSlug={slug} 
+        onEnrollmentChange={handleEnrollmentChange}
+      />
+      
+      {/* Debug Console Utilities */}
+      <DebugConsole courseSlug={slug} />
     </div>
   );
 } 

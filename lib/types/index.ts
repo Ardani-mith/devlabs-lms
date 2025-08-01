@@ -12,22 +12,22 @@ export interface User {
 }
 
 export interface Course {
-  id: string;
+  id: string | number;
   slug: string;
   title: string;
   description?: string;
   thumbnailUrl?: string;
-  instructorName: string;
+  instructorName?: string;
   instructorAvatarUrl?: string;
-  instructorId?: string;
+  instructorId?: string | number;
   category: string;
   lessonsCount: number;
   totalDurationHours: number;
   level: string;
-  rating: number;
+  rating: number | null;
   studentsEnrolled: number;
   price: number | string;
-  courseUrl: string;
+  courseUrl?: string;
   isNew?: boolean;
   published?: boolean;
   tags?: string[];
@@ -36,25 +36,47 @@ export interface Course {
   youtubeThumbnailUrl?: string;
   createdAt?: string;
   updatedAt?: string;
+  instructor?: {
+    id: number;
+    name: string;
+    instructorTitle?: string;
+    instructorBio?: string;
+  };
+  modules?: Module[];
+  lessons?: Lesson[]; // For flattened lessons access
 }
 
 // Course Detail Types (for individual course pages)
 export interface Lesson {
-  id: string;
+  id: string | number;
   title: string;
-  type: "video" | "bacaan" | "kuis" | "tugas" | "interaktif";
+  description?: string;
+  content?: string;
+  type?: "video" | "bacaan" | "kuis" | "tugas" | "interaktif";
   durationMinutes?: number;
-  status: "selesai" | "terkunci" | "sedang_dipelajari" | "selanjutnya";
-  url: string;
+  duration?: number; // Duration in seconds or milliseconds
+  status?: "selesai" | "terkunci" | "sedang_dipelajari" | "selanjutnya";
+  url?: string;
+  videoUrl?: string;
+  youtubeUrl?: string;
+  youtubeVideoId?: string;
+  videoDuration?: number;
   isPreviewable?: boolean;
+  order?: number;
+  moduleId?: string | number;
+  courseName?: string;
 }
 
 export interface Module {
-  id: string;
+  id: string | number;
   title: string;
   description?: string;
   lessons: Lesson[];
   isCollapsedInitially?: boolean;
+  courseId?: number;
+  order?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DiscussionReply {

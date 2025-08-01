@@ -192,3 +192,13 @@ export function getProperThumbnailUrl(url: string, fallbackUrl?: string): string
   // For any other case, return the fallback
   return fallbackUrl || PLACEHOLDER_IMAGE;
 }
+
+/**
+ * Convert YouTube URL to embed URL
+ */
+export function convertYouTubeToEmbed(url: string): string | null {
+  const videoId = extractYouTubeVideoId(url);
+  if (!videoId) return null;
+  
+  return getYouTubeEmbedUrl(videoId);
+}

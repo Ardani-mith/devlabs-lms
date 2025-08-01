@@ -44,7 +44,7 @@ export default function LessonSearch({ modules, onLessonSelect, activeLesson }: 
     });
   }, [allLessons, searchQuery, selectedType, selectedStatus]);
 
-  const getLessonIcon = (type: string) => {
+  const getLessonIcon = (type: string | undefined) => {
     switch (type) {
       case 'video': return VideoCameraIcon;
       case 'bacaan': return DocumentTextIcon;
@@ -55,7 +55,7 @@ export default function LessonSearch({ modules, onLessonSelect, activeLesson }: 
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | undefined) => {
     switch (status) {
       case 'selesai': return 'text-green-500';
       case 'sedang_dipelajari': return 'text-blue-500';
