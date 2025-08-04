@@ -111,7 +111,6 @@ export default function CourseDetailPage({
   useEffect(() => {
     const initialTestData = getTestEnrollmentData(slug);
     setTestEnrollmentData(initialTestData);
-    console.log('Initial test enrollment data:', initialTestData);
   }, [slug]);
 
   // Computed properties that consider test enrollment data
@@ -138,7 +137,6 @@ export default function CourseDetailPage({
   // Memoize the enrollment change handler to prevent re-renders
   const handleEnrollmentChange = useCallback((data: TestEnrollmentData) => {
     setTestEnrollmentData(data);
-    console.log('Test enrollment data changed:', data);
   }, []);
 
   useEffect(() => {
@@ -147,20 +145,49 @@ export default function CourseDetailPage({
         setLoading(true);
         setError(null);
 
+        // Retry logic for rate limiting
+        const fetchWithRetry = async (url: string, maxRetries = 3, delay = 1000): Promise<Response> => {
+          for (let i = 0; i < maxRetries; i++) {
+            try {
+              const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+              });
+
+              if (response.status === 429) {
+                // Rate limited, wait and retry
+                if (i < maxRetries - 1) {
+                  console.log(`Rate limited, retrying in ${delay}ms... (attempt ${i + 1}/${maxRetries})`);
+                  await new Promise(resolve => setTimeout(resolve, delay));
+                  delay *= 2; // Exponential backoff
+                  continue;
+                }
+              }
+
+              return response;
+            } catch (error) {
+              if (i === maxRetries - 1) throw error;
+              console.log(`Request failed, retrying in ${delay}ms... (attempt ${i + 1}/${maxRetries})`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+              delay *= 2;
+            }
+          }
+          throw new Error('Max retries exceeded');
+        };
+
         // Fetch course data from backend API using correct endpoint
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/courses/${slug}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+        const response = await fetchWithRetry(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4300'}/courses/${slug}`);
 
         if (!response.ok) {
-          throw new Error(`Course not found: ${response.status}`);
+          if (response.status === 429) {
+            throw new Error('Server sedang sibuk. Mohon tunggu sebentar dan coba lagi.');
+          }
+          throw new Error(`Course tidak ditemukan (${response.status})`);
         }
 
         const courseData = await response.json();
-        console.log('Fetched course data from API:', courseData);
 
         // Transform backend course data to CourseDetail interface
         const convertedCourse: CourseDetail = {
@@ -209,8 +236,6 @@ export default function CourseDetailPage({
               lessons: module.lessons?.map((lesson: BackendLesson, lessonIndex: number) => {
                 // Ensure lesson has valid ID
                 const lessonId = lesson.id ? lesson.id.toString() : `temp_${moduleIndex}_${lessonIndex}`;
-                
-                console.log(`Processing lesson: ${lesson.title}, ID: ${lessonId}`);
                 
                 return {
                   id: lessonId,
@@ -849,4 +874,4 @@ export default function CourseDetailPage({
       <DebugConsole courseSlug={slug} />
     </div>
   );
-} 
+}

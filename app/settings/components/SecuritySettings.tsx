@@ -115,8 +115,7 @@ export default function SecuritySettings() {
         alert("Password baru minimal 8 karakter!");
         return;
     }
-    console.log("Changing password:", { currentPassword, newPassword });
-    alert("Simulasi: Password berhasil diubah (cek konsol).");
+    alert("Simulasi: Password berhasil diubah.");
     setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
   };
 

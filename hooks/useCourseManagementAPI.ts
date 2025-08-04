@@ -145,31 +145,21 @@ export const useCourseManagementAPI = () => {
     setState(prev => ({ ...prev, loading: true }));
     
     try {
-      console.log('Fetching courses from:', `${API_BASE_URL}/courses`);
-      console.log('Auth headers:', getAuthHeaders());
-      
       const response = await fetch(`${API_BASE_URL}/courses`, {
         headers: getAuthHeaders()
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.log('Error response:', errorText);
         throw new Error(`Failed to fetch courses: ${response.status} ${errorText}`);
       }
 
       const courses = await response.json();
-      console.log('Fetched courses:', courses);
       
       // Filter courses by current user (teacher's courses)
       const teacherCourses = courses.filter((course: any) => 
         course.instructorId === user?.id
       );
-
-      console.log('Teacher courses:', teacherCourses);
 
       setState(prev => ({ 
         ...prev, 
@@ -227,12 +217,8 @@ export const useCourseManagementAPI = () => {
         body: JSON.stringify(courseData)
       });
 
-      console.log('Create course response status:', response.status);
-      console.log('Create course response ok:', response.ok);
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: `HTTP ${response.status}` }));
-        console.log('Create course error:', errorData);
         throw new Error(errorData.message || 'Gagal membuat kursus');
       }
 

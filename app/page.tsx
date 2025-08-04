@@ -77,25 +77,18 @@ export default function LoginPage() {
     event.preventDefault();
     setIsLoading(true);
     setError(null);
-  
-    console.log('🚀 Login attempt:', { username, password: '***' });
-  
+
     try {
       // Use the AuthContext loginWithCredentials method
       const result = await loginWithCredentials(username, password);
       
-      console.log('📝 Login result:', result);
-      
       if (result.success) {
-        console.log('✅ Login successful, redirecting to dashboard...');
         router.push('/dashboard');
       } else {
-        console.log('❌ Login failed:', result.error);
         setError(result.error || 'Login failed');
       }
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
-      console.log('💥 Login exception:', errorMessage);
       setError(errorMessage);
     } finally {
       setIsLoading(false);

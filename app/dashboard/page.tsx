@@ -117,15 +117,7 @@ export default function DashboardPage() {
   const [userOverallProgress, setUserOverallProgress] = useState(0);
   const [userQuickAccessLinks, setUserQuickAccessLinks] = useState<Array<{title: string, icon: React.ElementType, href: string}>>([]);
 
-  // Debug logs (hanya di development dan sekali saja)
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development' && user) {
-      console.log("User object:", user);
-      console.log("Display Name:", user.name || user.username);
-      console.log("Display Role:", user.role);
-    }
-  }, [user?.id]); // Only log when user ID changes
-
+  // Initialize user-specific data when user is loaded
   useEffect(() => {
     if (user) {
       // Set data berdasarkan peran pengguna

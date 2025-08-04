@@ -166,11 +166,30 @@ export class ApiClient {
           field: responseData.field,
         };
 
-        // Show error toast unless skipped
+        // Show error toast unless skipped or it's an expected error (404, 429)
         if (!config.skipErrorToast && typeof window !== 'undefined') {
-          console.error('API Error:', apiError.message);
-          // You can integrate with your preferred toast library here
-          // toast.error(apiError.message);
+          // Don't show error toast for expected errors
+          const isExpectedError = response.status === 404 || response.status === 429 || 
+                                 responseData.message?.includes('not found') ||
+                                 responseData.message?.includes('Lesson progress not found');
+          
+          // Handle 403 Forbidden specifically
+          const isForbiddenError = response.status === 403 || 
+                                  responseData.message?.includes('Forbidden') ||
+                                  responseData.message?.includes('forbidden');
+          
+          if (isForbiddenError) {
+            console.warn('Access denied:', apiError.message);
+            // Could redirect to login or show access denied message
+            // window.location.href = '/auth/login';
+          } else if (!isExpectedError) {
+            console.error('API Error:', apiError.message);
+            // You can integrate with your preferred toast library here
+            // toast.error(apiError.message);
+          } else {
+            // Log expected errors as info instead
+            console.info('Expected API response:', apiError.message);
+          }
         }
 
         throw apiError;
