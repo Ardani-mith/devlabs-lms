@@ -31,11 +31,7 @@ export default function TestControlPanel({ courseSlug, onEnrollmentChange }: Tes
   const [isOpen, setIsOpen] = useState(false);
   const [enrollmentData, setEnrollmentData] = useState<TestEnrollmentData>();
   
-  // Only show in development
-  if (process.env.NODE_ENV !== 'development') {
-    return null;
-  }
-
+  // Always call hooks first
   useEffect(() => {
     const updateEnrollmentData = () => {
       const data = getTestEnrollmentData(courseSlug);
@@ -57,6 +53,11 @@ export default function TestControlPanel({ courseSlug, onEnrollmentChange }: Tes
       window.removeEventListener('enrollmentChanged', handleEnrollmentChange as EventListener);
     };
   }, [courseSlug]); // Remove onEnrollmentChange from dependency
+
+  // Only show in development
+  if (process.env.NODE_ENV !== 'development') {
+    return null;
+  }
 
   const handleEnroll = () => {
     simulateEnrollment(courseSlug);

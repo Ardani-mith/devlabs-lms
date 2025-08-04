@@ -188,7 +188,7 @@ export default function ManageCoursePage() {
     setFormErrors([]);
     
     try {
-      const result = await updateCourse(editingCourse.id, formData);
+      const result = await updateCourse(editingCourse.id.toString(), formData);
       if (result) {
         showNotification('success', 'Course updated successfully! Changes will be visible on the courses page.');
         setEditingCourse(null);
@@ -214,7 +214,7 @@ export default function ManageCoursePage() {
     setFormErrors([]);
     
     try {
-      const success = await deleteCourse(deletingCourse.id);
+      const success = await deleteCourse(deletingCourse.id.toString());
       if (success) {
         showNotification('success', 'Course deleted successfully from database!');
         setDeletingCourse(null);

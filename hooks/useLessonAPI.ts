@@ -97,8 +97,6 @@ export const useLessonAPI = () => {
         duration: lessonData.duration, // Keep duration in minutes (backend will convert)
       };
 
-      console.log('Creating lesson with payload:', payload);
-
       const response = await fetch(`${API_BASE_URL}/lessons/course/${courseId}`, {
         method: 'POST',
         headers: getAuthHeaders(),

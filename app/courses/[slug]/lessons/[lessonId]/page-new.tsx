@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle, Clock, BookOpen, Play, ChevronRight } from 'lucide-react';
 import { YouTubePlayer } from '@/components/video/YouTubePlayer';
@@ -28,9 +28,9 @@ export default function LessonViewer() {
   const [progress, setProgress] = useState<LessonProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
-  const lastProgressUpdateRef = useRef<number>(0);
+  const [lastProgressUpdate, setLastProgressUpdate] = useState(0);
 
-  const { getLessonProgress, updateProgress } = useLessonProgress(Number(lessonId));
+  const { getLessonProgress, updateProgress, isLoading: progressLoading, error: progressError } = useLessonProgress(Number(lessonId));
 
   // Helper function to get all lessons from course modules
   const getAllLessons = (course: Course | null): Lesson[] => {
@@ -49,37 +49,10 @@ export default function LessonViewer() {
         setLoading(true);
         setError("");
 
-        // Retry logic for rate limiting
-        const fetchWithRetry = async (url: string, maxRetries = 3, delay = 1000): Promise<any> => {
-          for (let i = 0; i < maxRetries; i++) {
-            try {
-              const response = await apiClient.get(url);
-              return response;
-            } catch (fetchError: any) {
-              if (fetchError.message?.includes('429') || fetchError.status === 429) {
-                // Rate limited, wait and retry
-                if (i < maxRetries - 1) {
-                  console.log(`Rate limited, retrying in ${delay}ms... (attempt ${i + 1}/${maxRetries})`);
-                  await new Promise(resolve => setTimeout(resolve, delay));
-                  delay *= 2; // Exponential backoff
-                  continue;
-                }
-              }
-              throw fetchError;
-            }
-          }
-        };
-
-        // Fetch course data from backend API with retry logic
-        let courseResponse = null;
-        try {
-          courseResponse = await fetchWithRetry(`/courses/${slug}`);
-          if (courseResponse && isMounted) {
-            setCourse(courseResponse);
-          }
-        } catch (courseError: unknown) {
-          console.warn('Failed to fetch course data:', courseError);
-          // Continue without course data - lesson might still be fetchable
+        // Fetch course data from backend API (direct response)
+        const courseResponse = await apiClient.get(`/courses/${slug}`);
+        if (courseResponse && isMounted) {
+          setCourse(courseResponse);
         }
 
         // Fetch lesson data from Next.js API route (wrapped response)
@@ -93,7 +66,7 @@ export default function LessonViewer() {
           } else {
             throw new Error("Lesson not found or invalid response");
           }
-        } catch {
+        } catch (lessonError: any) {
           // If lesson not found, check if we can find it from course modules
           if (courseResponse?.modules && isMounted) {
             const allLessons = courseResponse.modules.flatMap((module: any) => module.lessons);
@@ -110,10 +83,10 @@ export default function LessonViewer() {
           }
         }
 
-      } catch (err: unknown) {
+      } catch (err: any) {
         if (isMounted) {
           console.error("Error fetching lesson data:", err);
-          setError((err as Error).message || "Failed to load lesson");
+          setError(err.message || "Failed to load lesson");
         }
       } finally {
         if (isMounted) {
@@ -158,12 +131,12 @@ export default function LessonViewer() {
   }, [lessonId, getLessonProgress]);
 
   // Handle video progress updates with debouncing
-  const handleVideoProgress = useCallback(async (progressPercent: number) => {
+  const handleVideoProgress = async (progressPercent: number) => {
     if (!lesson) return;
 
     // Debounce progress updates - only update every 5 seconds
     const now = Date.now();
-    if (now - lastProgressUpdateRef.current < 5000) {
+    if (now - lastProgressUpdate < 5000) {
       // Update local state immediately for UI responsiveness
       setProgress(prev => prev ? {
         ...prev,
@@ -174,7 +147,7 @@ export default function LessonViewer() {
       return;
     }
 
-    lastProgressUpdateRef.current = now;
+    setLastProgressUpdate(now);
 
     try {
       await updateProgress(progressPercent);
@@ -187,13 +160,13 @@ export default function LessonViewer() {
         lastWatched: new Date().toISOString()
       } : null);
 
-    } catch {
+    } catch (error: any) {
       // Handle progress update error silently - not critical for user experience
     }
-  }, [lesson, updateProgress]);
+  };
 
   // Handle lesson completion
-  const handleLessonComplete = useCallback(async () => {
+  const handleLessonComplete = async () => {
     if (!lesson) return;
 
     try {
@@ -217,20 +190,20 @@ export default function LessonViewer() {
     } catch (error) {
       console.error("Failed to mark lesson as complete:", error);
     }
-  }, [lesson, lessonId]);
+  };
 
   // Navigate back to course
-  const handleBackToCourse = useCallback(() => {
+  const handleBackToCourse = () => {
     router.push(`/courses/${slug}`);
-  }, [router, slug]);
+  };
 
   // Navigate to specific lesson
-  const handleNavigateToLesson = useCallback((newLessonId: string) => {
+  const handleNavigateToLesson = (newLessonId: string) => {
     router.push(`/courses/${slug}/lessons/${newLessonId}`);
-  }, [router, slug]);
+  };
 
   // Navigate to next lesson
-  const handleNextLesson = useCallback(() => {
+  const handleNextLesson = () => {
     if (!course) return;
     
     const allLessons = getAllLessons(course);
@@ -240,7 +213,7 @@ export default function LessonViewer() {
       const nextLesson = allLessons[currentIndex + 1];
       router.push(`/courses/${slug}/lessons/${nextLesson.id}`);
     }
-  }, [course, lessonId, router, slug]);
+  };
 
   // Loading state
   if (loading) {

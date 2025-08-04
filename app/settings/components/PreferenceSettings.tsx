@@ -70,7 +70,6 @@ export default function PreferenceSettings() {
   };
   
   const handleSavePreferences = () => {
-    console.log("Saving preferences:", { theme, language });
     alert("Simulasi: Preferensi berhasil disimpan!");
   };
 

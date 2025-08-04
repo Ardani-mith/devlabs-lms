@@ -10,7 +10,7 @@ interface BackendStatus {
 }
 
 // Global cache for backend status to avoid multiple simultaneous requests
-let globalStatusCache: {
+const globalStatusCache: {
   status: BackendStatus | null;
   lastCheck: number;
   isChecking: boolean;

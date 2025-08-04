@@ -182,6 +182,7 @@ interface UseLessonProgressReturn {
   completedAt: string | null;
   markCompleted: () => Promise<void>;
   updateProgress: (progress: number) => Promise<void>;
+  getLessonProgress: () => Promise<any>;
   isLoading: boolean;
   error: string | null;
 }
@@ -192,25 +193,54 @@ export function useLessonProgress(lessonId: number | null): UseLessonProgressRet
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadCompletionStatus = useCallback(async () => {
+  // Debounce mechanism to prevent multiple calls
+  const [lastFetchTime, setLastFetchTime] = useState(0);
+  const DEBOUNCE_DELAY = 1000; // 1 second
+
+  // Load progress from backend (using /progress endpoint)
+  const loadProgress = useCallback(async () => {
     if (!lessonId) return;
     
-    try {
-      const status = await lessonEndpoints.getCompletionStatus(lessonId);
-      setIsCompleted(status.isCompleted);
-      setCompletedAt(status.completedAt || null);
-    } catch (err: any) {
-      // Don't set error for this, as it might be normal for unenrolled users
-      console.warn('Failed to load lesson completion status:', err);
+    // Debounce to prevent multiple rapid calls
+    const now = Date.now();
+    if (now - lastFetchTime < DEBOUNCE_DELAY) {
+      return;
     }
-  }, [lessonId]);
+    setLastFetchTime(now);
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      const progress = await lessonEndpoints.getProgress(lessonId);
+      // Assume backend returns { progress: number, isCompleted: boolean, completedAt?: string }
+      setIsCompleted(!!progress.isCompleted);
+      setCompletedAt(progress.completedAt || null);
+    } catch (err: any) {
+      // If 404, treat as no progress yet (not an error)
+      if (err.status === 404 || err.status === 429 || err.message?.includes('not found')) {
+        setIsCompleted(false);
+        setCompletedAt(null);
+        // Don't set error for 404/429/not found - it's normal for new lessons
+        console.log(`No progress found for lesson ${lessonId} - this is normal for new lessons`);
+      } else if (err.status === 403 || err.message?.includes('Forbidden')) {
+        // Handle 403 - user might not be enrolled or lack permissions
+        setIsCompleted(false);
+        setCompletedAt(null);
+        console.warn(`Access denied for lesson ${lessonId} progress. User might not be enrolled.`);
+        // Don't set this as a hard error - lesson can still be viewed
+      } else {
+        setError(err.message || 'Failed to load lesson progress');
+        console.warn('Lesson progress load error:', err);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [lessonId, lastFetchTime]);
 
   const markCompleted = useCallback(async () => {
     if (!lessonId) return;
-    
     setIsLoading(true);
     setError(null);
-    
     try {
       await lessonEndpoints.markCompleted(lessonId);
       setIsCompleted(true);
@@ -225,29 +255,77 @@ export function useLessonProgress(lessonId: number | null): UseLessonProgressRet
 
   const updateProgress = useCallback(async (progress: number) => {
     if (!lessonId) return;
-    
     setIsLoading(true);
     setError(null);
-    
     try {
       await lessonEndpoints.updateProgress(lessonId, progress);
     } catch (err: any) {
+      // Handle 403 forbidden gracefully - user might not be enrolled
+      if (err.status === 403 || err.message?.includes('Forbidden')) {
+        console.warn(`Access denied for lesson ${lessonId} progress update. User might not be enrolled.`);
+        // Don't throw error - let the lesson continue to play
+        return;
+      }
       setError(err.message || 'Failed to update lesson progress');
-      throw err;
+      // Don't throw error for progress updates - they're not critical
+      console.warn('Progress update failed:', err);
     } finally {
       setIsLoading(false);
     }
   }, [lessonId]);
 
+  const getLessonProgress = useCallback(async () => {
+    if (!lessonId) return null;
+    
+    // Debounce mechanism
+    const now = Date.now();
+    if (now - lastFetchTime < DEBOUNCE_DELAY) {
+      return null;
+    }
+    
+    try {
+      const progress = await lessonEndpoints.getProgress(lessonId);
+      return progress;
+    } catch (err: any) {
+      // Handle 404/429/not found gracefully - don't throw error
+      if (err.status === 404 || err.status === 429 || err.message?.includes('not found')) {
+        console.log(`No progress found for lesson ${lessonId} - returning null`);
+        return null; // No progress data yet, this is normal
+      }
+      // Handle 403 forbidden - user might not be enrolled
+      if (err.status === 403 || err.message?.includes('Forbidden')) {
+        console.warn(`Access denied for lesson ${lessonId} progress. User might not be enrolled.`);
+        return null; // Return null so lesson can still be viewed
+      }
+      console.warn('Get lesson progress error:', err);
+      setError(err.message || 'Failed to get lesson progress');
+      return null;
+    }
+  }, [lessonId, lastFetchTime]);
+
+  // Use effect with cleanup to prevent double calls
   useEffect(() => {
-    loadCompletionStatus();
-  }, [loadCompletionStatus]);
+    let isMounted = true;
+    
+    const fetchProgress = async () => {
+      if (isMounted && lessonId) {
+        await loadProgress();
+      }
+    };
+    
+    fetchProgress();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [lessonId, loadProgress]); // Include loadProgress dependency
 
   return {
     isCompleted,
     completedAt,
     markCompleted,
     updateProgress,
+    getLessonProgress,
     isLoading,
     error
   };

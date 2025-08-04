@@ -25,9 +25,7 @@ export default function CoursesPage() {
       setLoading(true);
       setError(null);
       
-      console.log('🔄 Fetching courses from API...');
       const data = await apiClient.get('/courses');
-      console.log('✅ Fetched courses from API:', data);
 
       // Transform backend data to frontend Course interface
       const transformedCourses: Course[] = data.map((course: any) => ({
@@ -58,9 +56,7 @@ export default function CoursesPage() {
       }));
 
       setCourses(transformedCourses);
-      console.log('✅ Transformed courses:', transformedCourses);
     } catch (err) {
-      console.error('❌ Error fetching courses:', err);
       
       // Handle different error types
       let errorMessage = 'Failed to load courses';
@@ -91,7 +87,7 @@ export default function CoursesPage() {
     return courses
       .filter(course =>
         course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.instructorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (course.instructorName && course.instructorName.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (course.tags && course.tags.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase())))
       )

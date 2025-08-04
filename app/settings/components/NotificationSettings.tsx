@@ -79,7 +79,6 @@ export default function NotificationSettings() {
   };
   
   const handleSaveNotifications = () => {
-    console.log("Saving notification preferences:", prefs);
     alert("Simulasi: Preferensi notifikasi berhasil disimpan!");
   };
 

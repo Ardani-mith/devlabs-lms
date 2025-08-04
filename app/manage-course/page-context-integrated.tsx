@@ -122,7 +122,7 @@ export default function CourseManagementContextIntegrated() {
     setSubmitting(true);
     
     try {
-      const result = await updateCourse(editingCourse.id, formData);
+      const result = await updateCourse(editingCourse.id.toString(), formData);
       if (result) {
         showNotification('success', 'Kursus berhasil diperbarui dan perubahan akan terlihat di halaman courses!');
         setEditingCourse(null);
@@ -142,7 +142,7 @@ export default function CourseManagementContextIntegrated() {
     if (!deletingCourse) return;
     
     try {
-      const success = await deleteCourse(deletingCourse.id);
+      const success = await deleteCourse(deletingCourse.id.toString());
       if (success) {
         showNotification('success', 'Kursus berhasil dihapus dari database!');
         setDeletingCourse(null);

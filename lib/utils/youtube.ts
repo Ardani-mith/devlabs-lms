@@ -12,32 +12,43 @@ export function extractYouTubeVideoId(url: string): string | null {
   if (!url) return null;
 
   try {
+    console.log('🎥 Extracting video ID from URL:', url);
     const urlObj = new URL(url);
     
     // Handle youtube.com URLs
     if (urlObj.hostname.includes('youtube.com')) {
       // Regular watch URLs
       if (urlObj.pathname === '/watch') {
-        return urlObj.searchParams.get('v');
+        const videoId = urlObj.searchParams.get('v');
+        console.log('🎥 Extracted video ID from watch URL:', videoId);
+        return videoId;
       }
       // Shortened /v/ URLs
       if (urlObj.pathname.startsWith('/v/')) {
-        return urlObj.pathname.split('/')[2];
+        const videoId = urlObj.pathname.split('/')[2];
+        console.log('🎥 Extracted video ID from /v/ URL:', videoId);
+        return videoId;
       }
       // Embed URLs
       if (urlObj.pathname.startsWith('/embed/')) {
-        return urlObj.pathname.split('/')[2];
+        const pathParts = urlObj.pathname.split('/');
+        const videoId = pathParts[2]; // Get the video ID part
+        console.log('🎥 Extracted video ID from embed URL:', videoId);
+        return videoId;
       }
     }
     
     // Handle youtu.be URLs
     if (urlObj.hostname === 'youtu.be') {
-      return urlObj.pathname.slice(1);
+      const videoId = urlObj.pathname.slice(1);
+      console.log('🎥 Extracted video ID from youtu.be URL:', videoId);
+      return videoId;
     }
     
+    console.log('❌ Could not extract video ID from URL:', url);
     return null;
   } catch (error) {
-    console.error('Error parsing YouTube URL:', error);
+    console.error('❌ Error parsing YouTube URL:', error);
     return null;
   }
 }
@@ -197,8 +208,23 @@ export function getProperThumbnailUrl(url: string, fallbackUrl?: string): string
  * Convert YouTube URL to embed URL
  */
 export function convertYouTubeToEmbed(url: string): string | null {
-  const videoId = extractYouTubeVideoId(url);
-  if (!videoId) return null;
+  console.log('🎥 Converting URL to embed:', url);
   
-  return getYouTubeEmbedUrl(videoId);
+  // If it's already an embed URL, return it as is
+  if (url.includes('/embed/')) {
+    console.log('🎥 URL is already embed format:', url);
+    return url;
+  }
+  
+  const videoId = extractYouTubeVideoId(url);
+  console.log('🎥 Extracted video ID:', videoId);
+  
+  if (!videoId) {
+    console.log('❌ No video ID found');
+    return null;
+  }
+  
+  const embedUrl = getYouTubeEmbedUrl(videoId);
+  console.log('🎥 Generated embed URL:', embedUrl);
+  return embedUrl;
 }

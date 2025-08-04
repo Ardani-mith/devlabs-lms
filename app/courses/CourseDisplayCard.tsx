@@ -107,7 +107,7 @@ export function CourseDisplayCard({ course }: CourseDisplayCardProps) {
             <div className="relative w-6 h-6 rounded-full overflow-hidden bg-gray-200 dark:bg-neutral-700">
               <SafeImage
                 src={instructorAvatarUrl || ""}
-                alt={instructorName}
+                alt={instructorName || "Instructor"}
                 fill
                 className="object-cover"
               />
