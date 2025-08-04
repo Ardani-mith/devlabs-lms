@@ -8,8 +8,9 @@ export async function GET(
   try {
     console.log(`🎥 Fetching lesson ${lessonId} from backend...`);
     
-    // Fixed endpoint - should be /lessons/{id} not /lessons/course/{id}
-    const res = await fetch(`${process.env.BACKEND_URL}/lessons/${lessonId}`);
+    // Use the public lessons endpoint that doesn't require authentication
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const res = await fetch(`${backendUrl}/public-lessons/${lessonId}`);
     
     if (!res.ok) {
       console.log(`❌ Backend response not ok: ${res.status} ${res.statusText}`);
@@ -33,7 +34,9 @@ export async function PUT(
   const { lessonId } = await params;
   try {
     const body = await request.json();
-    const res = await fetch(`${process.env.BACKEND_URL}/lessons/${lessonId}`,
+    // Use the correct environment variable for backend URL
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const res = await fetch(`${backendUrl}/lessons/${lessonId}`,
       {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
